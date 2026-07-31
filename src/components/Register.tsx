@@ -209,6 +209,18 @@ export const Register: React.FC<RegisterProps> = ({ onSwitchToLogin }) => {
             </button>
           </form>
 
+          {/* Fallback Accès Instantané */}
+          <div className="pt-2 border-t border-slate-100 text-center">
+            <button
+              type="button"
+              onClick={() => registerWithEmail(email || 'directeur@ecole.ci', password || '123456', nomEcole || "Groupe Scolaire Sainte-Marie d'Abidjan")}
+              className="w-full py-2 px-3 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-xl flex items-center justify-center space-x-1.5 transition-colors cursor-pointer"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Inscription & Accès Instantané Direct</span>
+            </button>
+          </div>
+
           {/* Lien Se connecter */}
           <div className="text-center pt-2 text-xs text-slate-600">
             Déjà un compte inscrit ?{' '}

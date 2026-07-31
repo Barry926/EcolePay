@@ -185,15 +185,15 @@ export const Login: React.FC<LoginProps> = ({ onSwitchToRegister }) => {
             <span>Se connecter avec Google</span>
           </button>
 
-          {/* Bouton d'Accès Démo Rapide */}
-          <div className="pt-2 border-t border-slate-100 text-center">
+          {/* Bouton d'Accès Démo / Connexion Directe */}
+          <div className="pt-2 border-t border-slate-100 text-center space-y-2">
             <button
               type="button"
-              onClick={() => loginDemoUser("Groupe Scolaire Sainte-Marie d'Abidjan")}
-              className="w-full py-2 px-3 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-xl flex items-center justify-center space-x-1.5 transition-colors cursor-pointer"
+              onClick={() => loginDemoUser(email ? `Groupe Scolaire ${email.split('@')[0]}` : "Groupe Scolaire Sainte-Marie d'Abidjan")}
+              className="w-full py-2.5 px-3 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-xl flex items-center justify-center space-x-2 transition-colors cursor-pointer"
             >
-              <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Aperçu instantané (Mode Démo Directeur)</span>
+              <Sparkles className="w-4 h-4 text-emerald-600" />
+              <span>Accès Instantané Direct (Mode Directeur / Caisse)</span>
             </button>
           </div>
 
