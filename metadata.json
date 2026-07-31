@@ -1,0 +1,6 @@
+{
+  "name": "EcolePay",
+  "description": "SaaS de gestion des frais scolaires pour écoles privées en Côte d'Ivoire",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
