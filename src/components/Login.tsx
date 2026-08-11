@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { ThemeToggle } from './ThemeToggle';
 import { Mail, Lock, ShieldCheck, ArrowRight, AlertCircle, Sparkles } from 'lucide-react';
 
 interface LoginProps {
   onSwitchToRegister: () => void;
+  onBack?: () => void;
 }
 
-export const Login: React.FC<LoginProps> = ({ onSwitchToRegister }) => {
+export const Login: React.FC<LoginProps> = ({ onSwitchToRegister, onBack }) => {
   const { loginWithEmail, loginWithGoogle, loginDemoUser } = useAuth();
   
   const [email, setEmail] = useState('');
@@ -64,34 +66,44 @@ export const Login: React.FC<LoginProps> = ({ onSwitchToRegister }) => {
   };
 
   return (
-    <div className="min-h-screen bg-[#1e3a5f] flex flex-col justify-center items-center p-4 sm:p-6 font-sans antialiased text-slate-800">
+    <div className="relative min-h-screen bg-[#0F172A] flex flex-col justify-center items-center p-4 sm:p-6 font-sans antialiased text-slate-800 dark:text-slate-100 overflow-hidden">
+      {/* Décor arrière-plan */}
+      <div className="pointer-events-none absolute -top-32 -left-24 w-96 h-96 rounded-full bg-[#16A34A]/20 blur-[120px]" />
+      <div className="pointer-events-none absolute -bottom-40 -right-24 w-[28rem] h-[28rem] rounded-full bg-[#15803D]/20 blur-[130px]" />
+      <div className="pointer-events-none absolute inset-0 opacity-[0.04]" style={{backgroundImage:'radial-gradient(#ffffff 1px, transparent 1px)', backgroundSize:'22px 22px'}} />
+
+      {/* Toggle thème flottant */}
+      <div className="absolute top-5 right-5 z-20">
+        <ThemeToggle variant="floating" />
+      </div>
+
       {/* Container Principal */}
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-md relative z-10 animate-riseIn">
         
         {/* En-tête & Branding */}
         <div className="text-center mb-8 space-y-2">
-          <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-[#FF8200] text-white font-black text-2xl shadow-xl border-2 border-white/20 transform hover:scale-105 transition-transform">
+          <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-[#16A34A] text-white font-black text-2xl shadow-xl border-2 border-white/20 transform hover:scale-105 transition-transform">
             EP
           </div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-white">EcolePay</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight text-white">EcolePay <span className="text-[#16A34A]">CI</span></h1>
           <p className="text-sm font-medium text-slate-300">
             SaaS de gestion des frais scolaires pour écoles privées en Côte d'Ivoire 🇨🇮
           </p>
         </div>
 
         {/* Carte Blanche Centrée */}
-        <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-8 space-y-6">
+        <div className="bg-white dark:bg-[#1E293B] rounded-2xl shadow-2xl shadow-black/40 border border-slate-100 dark:border-slate-700/60 p-8 space-y-6">
           
-          <div className="border-b border-slate-100 pb-4">
-            <h2 className="text-xl font-bold text-slate-900">Connexion à votre espace</h2>
-            <p className="text-xs text-slate-500 mt-1">
+          <div className="border-b border-slate-100 dark:border-slate-800 pb-4">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">Connexion à votre espace</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
               Entrez vos accès fondation ou secrétariat pour accéder au tableau de bord.
             </p>
           </div>
 
           {/* Affichage des Erreurs */}
           {error && (
-            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-start space-x-2 animate-fadeIn">
+            <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs flex items-start space-x-2 animate-fadeIn">
               <AlertCircle className="w-4 h-4 mt-0.5 shrink-0 text-rose-600" />
               <div className="flex-1">
                 <span className="font-semibold">{error}</span>
@@ -102,11 +114,11 @@ export const Login: React.FC<LoginProps> = ({ onSwitchToRegister }) => {
           {/* Formulaire Email + Password */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider">
                 Adresse Email
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
                   <Mail className="w-4 h-4" />
                 </div>
                 <input
@@ -115,22 +127,22 @@ export const Login: React.FC<LoginProps> = ({ onSwitchToRegister }) => {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="directeur@ecole.ci"
                   required
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#FF8200] focus:border-transparent transition-all"
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-[#16A34A] focus:border-transparent transition-all"
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider">
                   Mot de passe
                 </label>
-                <a href="#forgot" onClick={(e) => { e.preventDefault(); alert('Fonctionnalité de réinitialisation : saisissez votre email pour recevoir un lien.'); }} className="text-xs text-[#FF8200] font-semibold hover:underline">
+                <a href="#forgot" onClick={(e) => { e.preventDefault(); alert('Fonctionnalité de réinitialisation : saisissez votre email pour recevoir un lien.'); }} className="text-xs text-[#16A34A] font-semibold hover:underline">
                   Oublié ?
                 </a>
               </div>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
                   <Lock className="w-4 h-4" />
                 </div>
                 <input
@@ -139,7 +151,7 @@ export const Login: React.FC<LoginProps> = ({ onSwitchToRegister }) => {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#FF8200] focus:border-transparent transition-all"
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-[#16A34A] focus:border-transparent transition-all"
                 />
               </div>
             </div>
@@ -148,7 +160,7 @@ export const Login: React.FC<LoginProps> = ({ onSwitchToRegister }) => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 px-4 bg-[#FF8200] hover:bg-[#e07200] active:scale-[0.99] text-white font-bold rounded-xl shadow-lg shadow-orange-500/25 flex items-center justify-center space-x-2 transition-all cursor-pointer disabled:opacity-60"
+              className="w-full py-3 px-4 bg-[#16A34A] hover:bg-[#15803D] active:scale-[0.99] text-white font-bold rounded-xl shadow-lg shadow-emerald-500/25 flex items-center justify-center space-x-2 transition-all cursor-pointer disabled:opacity-60"
             >
               {loading ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -163,8 +175,8 @@ export const Login: React.FC<LoginProps> = ({ onSwitchToRegister }) => {
 
           {/* Séparateur */}
           <div className="relative flex items-center justify-center my-4">
-            <div className="border-t border-slate-200 w-full" />
-            <span className="bg-white px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider absolute">
+            <div className="border-t border-slate-200 dark:border-slate-700 w-full" />
+            <span className="bg-white dark:bg-[#1E293B] px-3 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider absolute">
               OU
             </span>
           </div>
@@ -174,7 +186,7 @@ export const Login: React.FC<LoginProps> = ({ onSwitchToRegister }) => {
             type="button"
             onClick={handleGoogleLogin}
             disabled={loading}
-            className="w-full py-2.5 px-4 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 font-semibold rounded-xl flex items-center justify-center space-x-3 transition-colors cursor-pointer disabled:opacity-60 text-sm"
+            className="w-full py-2.5 px-4 bg-slate-50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-semibold rounded-xl flex items-center justify-center space-x-3 transition-colors cursor-pointer disabled:opacity-60 text-sm"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -186,11 +198,11 @@ export const Login: React.FC<LoginProps> = ({ onSwitchToRegister }) => {
           </button>
 
           {/* Bouton d'Accès Démo / Connexion Directe */}
-          <div className="pt-2 border-t border-slate-100 text-center space-y-2">
+          <div className="pt-2 border-t border-slate-100 dark:border-slate-800 text-center space-y-2">
             <button
               type="button"
               onClick={() => loginDemoUser(email ? `Groupe Scolaire ${email.split('@')[0]}` : "Groupe Scolaire Sainte-Marie d'Abidjan")}
-              className="w-full py-2.5 px-3 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-xl flex items-center justify-center space-x-2 transition-colors cursor-pointer"
+              className="w-full py-2.5 px-3 bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-xs font-bold rounded-xl flex items-center justify-center space-x-2 transition-colors cursor-pointer"
             >
               <Sparkles className="w-4 h-4 text-emerald-600" />
               <span>Accès Instantané Direct (Mode Directeur / Caisse)</span>
@@ -198,12 +210,12 @@ export const Login: React.FC<LoginProps> = ({ onSwitchToRegister }) => {
           </div>
 
           {/* Lien Créer un compte */}
-          <div className="text-center pt-2 text-xs text-slate-600">
+          <div className="text-center pt-2 text-xs text-slate-600 dark:text-slate-300">
             Vous n'avez pas encore de compte école ?{' '}
             <button
               type="button"
               onClick={onSwitchToRegister}
-              className="text-[#FF8200] font-bold hover:underline cursor-pointer"
+              className="text-[#16A34A] font-bold hover:underline cursor-pointer"
             >
               Créer un compte
             </button>
@@ -212,7 +224,7 @@ export const Login: React.FC<LoginProps> = ({ onSwitchToRegister }) => {
         </div>
 
         {/* Footer info */}
-        <div className="mt-6 text-center text-xs text-slate-400 flex items-center justify-center space-x-1">
+        <div className="mt-6 text-center text-xs text-slate-400 dark:text-slate-500 flex items-center justify-center space-x-1">
           <ShieldCheck className="w-3.5 h-3.5" />
           <span>Plateforme sécurisée certifiée pour établissements privés CI</span>
         </div>

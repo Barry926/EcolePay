@@ -266,15 +266,15 @@ export const SchoolSettingsView: React.FC = () => {
     <div className="space-y-6">
       
       {/* EN-TETE PRINCIPAL AVEC AVERTISSEMENT / BOUTON ENREGISTRER */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white dark:bg-[#1E293B] p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center space-x-2">
-            <Building2 className="w-6 h-6 text-[#1e3a5f]" />
-            <h2 className="text-xl font-black text-slate-900 tracking-tight">
+            <Building2 className="w-6 h-6 text-[#0F172A]" />
+            <h2 className="text-xl font-black text-slate-900 dark:text-slate-50 tracking-tight">
               Paramètres & Configuration École
             </h2>
           </div>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             Gérez les coordonnées de l'établissement, les tranches de paiement, les classes et les accès secrétariat.
           </p>
         </div>
@@ -283,7 +283,7 @@ export const SchoolSettingsView: React.FC = () => {
           <button
             onClick={handleSaveAllSettings}
             disabled={savingStatus === 'saving'}
-            className="w-full md:w-auto px-5 py-3 bg-[#FF8200] hover:bg-[#e07200] active:scale-95 text-white font-bold text-xs rounded-xl shadow-md shadow-orange-500/20 flex items-center justify-center space-x-2 transition-all cursor-pointer disabled:opacity-50"
+            className="w-full md:w-auto px-5 py-3 bg-[#16A34A] hover:bg-[#15803D] active:scale-95 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-500/20 flex items-center justify-center space-x-2 transition-all cursor-pointer disabled:opacity-50"
           >
             {savingStatus === 'saving' ? (
               <>
@@ -302,27 +302,27 @@ export const SchoolSettingsView: React.FC = () => {
 
       {/* FEEDBACK MESSAGE DE CONFIRMATION */}
       {savingStatus === 'success' && (
-        <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl flex items-center space-x-3 text-xs font-bold animate-fadeIn">
+        <div className="p-4 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300 rounded-2xl flex items-center space-x-3 text-xs font-bold animate-fadeIn">
           <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-          <span>Configuration sauvegardée avec succès dans Firestore sous <code className="bg-emerald-100 px-1.5 py-0.5 rounded text-emerald-900">schools/{schoolId}/settings</code> !</span>
+          <span>Configuration sauvegardée avec succès dans Firestore sous <code className="bg-emerald-100 dark:bg-emerald-500/20 px-1.5 py-0.5 rounded text-emerald-900 dark:text-emerald-300">schools/{schoolId}/settings</code> !</span>
         </div>
       )}
 
       {savingStatus === 'error' && (
-        <div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl flex items-center space-x-3 text-xs font-bold animate-fadeIn">
+        <div className="p-4 bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 text-rose-800 dark:text-rose-300 rounded-2xl flex items-center space-x-3 text-xs font-bold animate-fadeIn">
           <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
           <span>Une erreur est survenue lors de l'enregistrement. Vérifiez votre connexion internet ou vos règles Firebase.</span>
         </div>
       )}
 
       {/* NAVIGATION TABS MOBILE & DESKTOP */}
-      <div className="flex overflow-x-auto space-x-2 border-b border-slate-200 pb-2 scrollbar-none">
+      <div className="flex overflow-x-auto space-x-2 border-b border-slate-200 dark:border-slate-700 pb-2 scrollbar-none">
         <button
           onClick={() => setActiveSection('info')}
           className={`px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap flex items-center space-x-2 transition-colors cursor-pointer ${
             activeSection === 'info'
-              ? 'bg-[#1e3a5f] text-white shadow-xs'
-              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+              ? 'bg-[#0F172A] text-white shadow-xs'
+              : 'bg-white dark:bg-[#1E293B] text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
           }`}
         >
           <Building2 className="w-4 h-4" />
@@ -333,8 +333,8 @@ export const SchoolSettingsView: React.FC = () => {
           onClick={() => setActiveSection('tranches')}
           className={`px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap flex items-center space-x-2 transition-colors cursor-pointer ${
             activeSection === 'tranches'
-              ? 'bg-[#1e3a5f] text-white shadow-xs'
-              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+              ? 'bg-[#0F172A] text-white shadow-xs'
+              : 'bg-white dark:bg-[#1E293B] text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
           }`}
         >
           <DollarSign className="w-4 h-4" />
@@ -345,8 +345,8 @@ export const SchoolSettingsView: React.FC = () => {
           onClick={() => setActiveSection('classes')}
           className={`px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap flex items-center space-x-2 transition-colors cursor-pointer ${
             activeSection === 'classes'
-              ? 'bg-[#1e3a5f] text-white shadow-xs'
-              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+              ? 'bg-[#0F172A] text-white shadow-xs'
+              : 'bg-white dark:bg-[#1E293B] text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
           }`}
         >
           <GraduationCap className="w-4 h-4" />
@@ -357,8 +357,8 @@ export const SchoolSettingsView: React.FC = () => {
           onClick={() => setActiveSection('utilisateurs')}
           className={`px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap flex items-center space-x-2 transition-colors cursor-pointer ${
             activeSection === 'utilisateurs'
-              ? 'bg-[#1e3a5f] text-white shadow-xs'
-              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+              ? 'bg-[#0F172A] text-white shadow-xs'
+              : 'bg-white dark:bg-[#1E293B] text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
           }`}
         >
           <UserPlus className="w-4 h-4" />
@@ -368,16 +368,16 @@ export const SchoolSettingsView: React.FC = () => {
 
       {/* SECTION 1 : INFORMATIONS DE L'ÉCOLE */}
       {(activeSection === 'info' || activeSection === undefined) && (
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
-          <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+        <div className="bg-white dark:bg-[#1E293B] p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-6">
+          <div className="border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center justify-between">
             <div>
-              <h3 className="text-base font-bold text-slate-900 flex items-center">
-                <Building2 className="w-5 h-5 mr-2 text-[#FF8200]" />
+              <h3 className="text-base font-bold text-slate-900 dark:text-slate-50 flex items-center">
+                <Building2 className="w-5 h-5 mr-2 text-[#16A34A]" />
                 Informations Légales de l'Établissement
               </h3>
-              <p className="text-xs text-slate-500">Ces informations figureront sur les reçus officiels PDF générés</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Ces informations figureront sur les reçus officiels PDF générés</p>
             </div>
-            <span className="text-[11px] font-bold text-[#1e3a5f] bg-blue-50 px-2.5 py-1 rounded-full border border-blue-200 hidden sm:inline-block">
+            <span className="text-[11px] font-bold text-[#0F172A] bg-blue-50 dark:bg-blue-500/10 px-2.5 py-1 rounded-full border border-blue-200 dark:border-blue-500/30 hidden sm:inline-block">
               Ministère de l'Éducation Nationale 🇨🇮
             </span>
           </div>
@@ -386,8 +386,8 @@ export const SchoolSettingsView: React.FC = () => {
             
             {/* Nom de l'école */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 flex items-center">
-                <Building2 className="w-3.5 h-3.5 mr-1 text-slate-400" />
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center">
+                <Building2 className="w-3.5 h-3.5 mr-1 text-slate-400 dark:text-slate-500" />
                 Nom Officiel de l'Établissement *
               </label>
               <input
@@ -395,15 +395,15 @@ export const SchoolSettingsView: React.FC = () => {
                 value={nomEtablissement}
                 onChange={(e) => setNomEtablissement(e.target.value)}
                 placeholder="Ex: Groupe Scolaire Sainte-Marie d'Abidjan"
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#FF8200]"
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-900 dark:text-slate-50 focus:outline-none focus:ring-2 focus:ring-[#16A34A]"
                 required
               />
             </div>
 
             {/* Code MENA */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 flex items-center">
-                <ShieldCheck className="w-3.5 h-3.5 mr-1 text-[#FF8200]" />
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center">
+                <ShieldCheck className="w-3.5 h-3.5 mr-1 text-[#16A34A]" />
                 Code MENA (Matricule Ministère) *
               </label>
               <input
@@ -411,14 +411,14 @@ export const SchoolSettingsView: React.FC = () => {
                 value={codeMena}
                 onChange={(e) => setCodeMena(e.target.value)}
                 placeholder="Ex: MENA-ABJ-2026-0842"
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#FF8200]"
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono font-bold text-slate-900 dark:text-slate-50 focus:outline-none focus:ring-2 focus:ring-[#16A34A]"
               />
             </div>
 
             {/* Adresse */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 flex items-center">
-                <MapPin className="w-3.5 h-3.5 mr-1 text-slate-400" />
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center">
+                <MapPin className="w-3.5 h-3.5 mr-1 text-slate-400 dark:text-slate-500" />
                 Adresse Physique Complète *
               </label>
               <input
@@ -426,14 +426,14 @@ export const SchoolSettingsView: React.FC = () => {
                 value={adresse}
                 onChange={(e) => setAdresse(e.target.value)}
                 placeholder="Ex: Boulevard Latrille, Cocody Riviera 2, Abidjan"
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#FF8200]"
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-50 focus:outline-none focus:ring-2 focus:ring-[#16A34A]"
               />
             </div>
 
             {/* Téléphone Directeur */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 flex items-center">
-                <Phone className="w-3.5 h-3.5 mr-1 text-slate-400" />
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center">
+                <Phone className="w-3.5 h-3.5 mr-1 text-slate-400 dark:text-slate-500" />
                 Téléphone Directeur / Secrétariat *
               </label>
               <input
@@ -441,14 +441,14 @@ export const SchoolSettingsView: React.FC = () => {
                 value={telephoneDirecteur}
                 onChange={(e) => setTelephoneDirecteur(e.target.value)}
                 placeholder="Ex: +225 07 48 29 10 00"
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#FF8200]"
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-50 focus:outline-none focus:ring-2 focus:ring-[#16A34A]"
               />
             </div>
 
             {/* Email Officiel */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 flex items-center">
-                <Mail className="w-3.5 h-3.5 mr-1 text-slate-400" />
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center">
+                <Mail className="w-3.5 h-3.5 mr-1 text-slate-400 dark:text-slate-500" />
                 Email Officiel d'Établissement *
               </label>
               <input
@@ -456,21 +456,21 @@ export const SchoolSettingsView: React.FC = () => {
                 value={emailOfficiel}
                 onChange={(e) => setEmailOfficiel(e.target.value)}
                 placeholder="Ex: direction@saintemarie-abidjan.ci"
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#FF8200]"
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-slate-50 focus:outline-none focus:ring-2 focus:ring-[#16A34A]"
               />
             </div>
 
             {/* Upload Logo École */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 flex items-center">
-                <ImageIcon className="w-3.5 h-3.5 mr-1 text-slate-400" />
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center">
+                <ImageIcon className="w-3.5 h-3.5 mr-1 text-slate-400 dark:text-slate-500" />
                 Logo Officiel de l'École (Image)
               </label>
-              <div className="flex items-center space-x-4 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+              <div className="flex items-center space-x-4 p-3 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 rounded-xl">
                 {logoUrl ? (
-                  <img src={logoUrl} alt="Logo École" className="w-12 h-12 rounded-lg object-contain border border-slate-200 bg-white" />
+                  <img src={logoUrl} alt="Logo École" className="w-12 h-12 rounded-lg object-contain border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#1E293B]" />
                 ) : (
-                  <div className="w-12 h-12 rounded-lg bg-[#1e3a5f] text-white font-black text-sm flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-lg bg-[#0F172A] text-white font-black text-sm flex items-center justify-center">
                     EP
                   </div>
                 )}
@@ -484,12 +484,12 @@ export const SchoolSettingsView: React.FC = () => {
                   />
                   <label
                     htmlFor="logo-upload-input"
-                    className="px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 text-xs font-bold rounded-lg inline-flex items-center space-x-1.5 cursor-pointer transition-colors"
+                    className="px-3 py-1.5 bg-white dark:bg-[#1E293B] border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 text-xs font-bold rounded-lg inline-flex items-center space-x-1.5 cursor-pointer transition-colors"
                   >
-                    <Upload className="w-3.5 h-3.5 text-[#FF8200]" />
+                    <Upload className="w-3.5 h-3.5 text-[#16A34A]" />
                     <span>{logoUrl ? 'Changer le Logo' : 'Uploader Image Logo'}</span>
                   </label>
-                  <p className="text-[10px] text-slate-400 mt-1">Format PNG, JPG recommandé (Max 2 Mo)</p>
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">Format PNG, JPG recommandé (Max 2 Mo)</p>
                 </div>
               </div>
             </div>
@@ -500,23 +500,23 @@ export const SchoolSettingsView: React.FC = () => {
 
       {/* SECTION 2 : CONFIGURATION DES TRANCHES */}
       {activeSection === 'tranches' && (
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
-          <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+        <div className="bg-white dark:bg-[#1E293B] p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-6">
+          <div className="border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center justify-between">
             <div>
-              <h3 className="text-base font-bold text-slate-900 flex items-center">
-                <DollarSign className="w-5 h-5 mr-2 text-[#FF8200]" />
+              <h3 className="text-base font-bold text-slate-900 dark:text-slate-50 flex items-center">
+                <DollarSign className="w-5 h-5 mr-2 text-[#16A34A]" />
                 Échéancier & Tranches de Scolarité
               </h3>
-              <p className="text-xs text-slate-500">Configurez les tranches d'encaissement et leurs dates limites d'échéance</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Configurez les tranches d'encaissement et leurs dates limites d'échéance</p>
             </div>
           </div>
 
           {/* LISTE DES TRANCHES ACTUELLES */}
           <div className="space-y-3">
             {tranches.map((tr, index) => (
-              <div key={tr.id} className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div key={tr.id} className="p-4 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 rounded-xl bg-[#1e3a5f] text-white font-black text-xs flex items-center justify-center shrink-0">
+                  <div className="w-8 h-8 rounded-xl bg-[#0F172A] text-white font-black text-xs flex items-center justify-center shrink-0">
                     T{index + 1}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -524,31 +524,31 @@ export const SchoolSettingsView: React.FC = () => {
                       type="text"
                       value={tr.nom}
                       onChange={(e) => handleUpdateTranche(tr.id, 'nom', e.target.value)}
-                      className="bg-transparent font-bold text-slate-900 text-xs border-b border-transparent hover:border-slate-300 focus:border-[#FF8200] focus:outline-none w-full"
+                      className="bg-transparent font-bold text-slate-900 dark:text-slate-50 text-xs border-b border-transparent hover:border-slate-300 focus:border-[#16A34A] focus:outline-none w-full"
                     />
-                    <div className="flex items-center space-x-3 text-[11px] text-slate-500 mt-1">
+                    <div className="flex items-center space-x-3 text-[11px] text-slate-500 dark:text-slate-400 mt-1">
                       <span className="flex items-center">
-                        <Calendar className="w-3 h-3 mr-1 text-[#FF8200]" />
+                        <Calendar className="w-3 h-3 mr-1 text-[#16A34A]" />
                         Échéance: {tr.dateLimite}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between sm:justify-end space-x-3 border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-200">
+                <div className="flex items-center justify-between sm:justify-end space-x-3 border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-200 dark:border-slate-700">
                   <div className="text-right">
                     <input
                       type="number"
                       value={tr.montant}
                       onChange={(e) => handleUpdateTranche(tr.id, 'montant', Number(e.target.value))}
-                      className="w-28 text-right bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs font-black text-slate-900 focus:ring-1 focus:ring-[#FF8200]"
+                      className="w-28 text-right bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-xs font-black text-slate-900 dark:text-slate-50 focus:ring-1 focus:ring-[#16A34A]"
                     />
-                    <span className="text-[10px] font-bold text-slate-400 ml-1">FCFA</span>
+                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 ml-1">FCFA</span>
                   </div>
 
                   <button
                     onClick={() => handleDeleteTranche(tr.id)}
-                    className="p-1.5 hover:bg-rose-100 text-slate-400 hover:text-rose-600 rounded-lg transition-colors cursor-pointer"
+                    className="p-1.5 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-slate-400 dark:text-slate-500 hover:text-rose-600 rounded-lg transition-colors cursor-pointer"
                     title="Supprimer Tranche"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -559,43 +559,43 @@ export const SchoolSettingsView: React.FC = () => {
           </div>
 
           {/* FORMULAIRE D'AJOUT DE TRANCHE */}
-          <form onSubmit={handleAddTranche} className="p-4 bg-orange-50/50 border border-orange-200 rounded-2xl space-y-3">
-            <h4 className="text-xs font-bold text-[#FF8200] flex items-center uppercase tracking-wider">
+          <form onSubmit={handleAddTranche} className="p-4 bg-orange-50 dark:bg-orange-500/10/50 border border-orange-200 dark:border-orange-500/30 rounded-2xl space-y-3">
+            <h4 className="text-xs font-bold text-[#16A34A] flex items-center uppercase tracking-wider">
               <Plus className="w-4 h-4 mr-1" />
               Ajouter une Nouvelle Tranche de Scolarité
             </h4>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label className="text-[11px] font-bold text-slate-600">Libellé Tranche *</label>
+                <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300">Libellé Tranche *</label>
                 <input
                   type="text"
                   value={newTrancheNom}
                   onChange={(e) => setNewTrancheNom(e.target.value)}
                   placeholder="Ex: 4ème Tranche (Solde Spécial)"
-                  className="w-full mt-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-1 focus:ring-[#FF8200]"
+                  className="w-full mt-1 px-3 py-2 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium focus:outline-none focus:ring-1 focus:ring-[#16A34A]"
                   required
                 />
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-slate-600">Date Limite Échéance *</label>
+                <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300">Date Limite Échéance *</label>
                 <input
                   type="date"
                   value={newTrancheDate}
                   onChange={(e) => setNewTrancheDate(e.target.value)}
-                  className="w-full mt-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-1 focus:ring-[#FF8200]"
+                  className="w-full mt-1 px-3 py-2 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium focus:outline-none focus:ring-1 focus:ring-[#16A34A]"
                 />
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-slate-600">Montant Exigé (FCFA) *</label>
+                <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300">Montant Exigé (FCFA) *</label>
                 <input
                   type="number"
                   value={newTrancheMontant}
                   onChange={(e) => setNewTrancheMontant(e.target.value)}
                   placeholder="Ex: 50000"
-                  className="w-full mt-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-1 focus:ring-[#FF8200]"
+                  className="w-full mt-1 px-3 py-2 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium focus:outline-none focus:ring-1 focus:ring-[#16A34A]"
                   required
                 />
               </div>
@@ -603,7 +603,7 @@ export const SchoolSettingsView: React.FC = () => {
 
             <button
               type="submit"
-              className="px-4 py-2 bg-[#FF8200] hover:bg-[#e07200] text-white text-xs font-bold rounded-xl shadow-xs inline-flex items-center space-x-1.5 cursor-pointer transition-colors"
+              className="px-4 py-2 bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold rounded-xl shadow-xs inline-flex items-center space-x-1.5 cursor-pointer transition-colors"
             >
               <Plus className="w-4 h-4" />
               <span>Valider Nouvelle Tranche</span>
@@ -614,16 +614,16 @@ export const SchoolSettingsView: React.FC = () => {
 
       {/* SECTION 3 : LISTE DES CLASSES DISPONIBLES */}
       {activeSection === 'classes' && (
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
-          <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+        <div className="bg-white dark:bg-[#1E293B] p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-6">
+          <div className="border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center justify-between">
             <div>
-              <h3 className="text-base font-bold text-slate-900 flex items-center">
-                <GraduationCap className="w-5 h-5 mr-2 text-[#1e3a5f]" />
+              <h3 className="text-base font-bold text-slate-900 dark:text-slate-50 flex items-center">
+                <GraduationCap className="w-5 h-5 mr-2 text-[#0F172A]" />
                 Répertoire des Classes de l'Établissement
               </h3>
-              <p className="text-xs text-slate-500">Ajoutez ou retirez les classes enregistrées dans votre école</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Ajoutez ou retirez les classes enregistrées dans votre école</p>
             </div>
-            <span className="text-xs font-bold text-slate-700 bg-slate-100 px-3 py-1 rounded-full border border-slate-200">
+            <span className="text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-700">
               {classesList.length} Classes Actives
             </span>
           </div>
@@ -635,11 +635,11 @@ export const SchoolSettingsView: React.FC = () => {
               value={newClasseInput}
               onChange={(e) => setNewClasseInput(e.target.value)}
               placeholder="Ex: Terminale C2, 5ème 3, CP1 B..."
-              className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#FF8200]"
+              className="flex-1 px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-900 dark:text-slate-50 focus:outline-none focus:ring-2 focus:ring-[#16A34A]"
             />
             <button
               type="submit"
-              className="px-4 py-2.5 bg-[#1e3a5f] hover:bg-[#162a45] text-white text-xs font-bold rounded-xl shadow-xs inline-flex items-center space-x-1 cursor-pointer transition-colors shrink-0"
+              className="px-4 py-2.5 bg-[#0F172A] hover:bg-[#0B1120] text-white text-xs font-bold rounded-xl shadow-xs inline-flex items-center space-x-1 cursor-pointer transition-colors shrink-0"
             >
               <Plus className="w-4 h-4" />
               <span>Ajouter Classe</span>
@@ -651,12 +651,12 @@ export const SchoolSettingsView: React.FC = () => {
             {classesList.map((cls) => (
               <div
                 key={cls}
-                className="px-3 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-800 rounded-xl text-xs font-bold flex items-center space-x-2 transition-colors group"
+                className="px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 rounded-xl text-xs font-bold flex items-center space-x-2 transition-colors group"
               >
                 <span>{cls}</span>
                 <button
                   onClick={() => handleDeleteClasse(cls)}
-                  className="text-slate-400 hover:text-rose-600 transition-colors p-0.5"
+                  className="text-slate-400 dark:text-slate-500 hover:text-rose-600 transition-colors p-0.5"
                   title="Supprimer la classe"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -669,14 +669,14 @@ export const SchoolSettingsView: React.FC = () => {
 
       {/* SECTION 4 : GESTION DES UTILISATEURS (SECRETAIRES) */}
       {activeSection === 'utilisateurs' && (
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
-          <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+        <div className="bg-white dark:bg-[#1E293B] p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-6">
+          <div className="border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center justify-between">
             <div>
-              <h3 className="text-base font-bold text-slate-900 flex items-center">
-                <UserPlus className="w-5 h-5 mr-2 text-[#FF8200]" />
+              <h3 className="text-base font-bold text-slate-900 dark:text-slate-50 flex items-center">
+                <UserPlus className="w-5 h-5 mr-2 text-[#16A34A]" />
                 Gestion du Personnel & Comptes Secrétariat
               </h3>
-              <p className="text-xs text-slate-500">Ajoutez des agents pour la caisse et gérez leurs droits d'accès</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Ajoutez des agents pour la caisse et gérez leurs droits d'accès</p>
             </div>
           </div>
 
@@ -684,38 +684,38 @@ export const SchoolSettingsView: React.FC = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="bg-slate-50 text-slate-500 font-bold uppercase text-[10px] tracking-wider border-b border-slate-100">
+                <tr className="bg-slate-50 dark:bg-slate-800/40 text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px] tracking-wider border-b border-slate-100 dark:border-slate-800">
                   <th className="px-4 py-3">Nom & Email Agent</th>
                   <th className="px-4 py-3">Rôle & Fonction</th>
                   <th className="px-4 py-3">Statut Compte</th>
                   <th className="px-4 py-3 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 font-medium">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
                 {personnelList.map((p) => (
-                  <tr key={p.id} className="hover:bg-slate-50 transition-colors">
+                  <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
                     <td className="px-4 py-3">
-                      <div className="font-bold text-slate-900">{p.nomComplet}</div>
-                      <div className="text-xs text-slate-400 font-mono">{p.email}</div>
+                      <div className="font-bold text-slate-900 dark:text-slate-50">{p.nomComplet}</div>
+                      <div className="text-xs text-slate-400 dark:text-slate-500 font-mono">{p.email}</div>
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
                         p.role === 'admin_fondateur' 
-                          ? 'bg-purple-50 text-purple-800 border-purple-200' 
-                          : 'bg-blue-50 text-blue-800 border-blue-200'
+                          ? 'bg-purple-50 dark:bg-purple-500/10 text-purple-800 dark:text-purple-300 border-purple-200 dark:border-purple-500/30' 
+                          : 'bg-blue-50 dark:bg-blue-500/10 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-500/30'
                       }`}>
                         {p.role === 'admin_fondateur' ? 'Directeur / Admin' : 'Secrétaire / Caisse'}
                       </span>
                     </td>
                     <td className="px-4 py-3">
                       {p.actif ? (
-                        <span className="inline-flex items-center text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                        <span className="inline-flex items-center text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-500/30">
                           <UserCheck className="w-3.5 h-3.5 mr-1 text-emerald-600" />
                           Actif
                         </span>
                       ) : (
-                        <span className="inline-flex items-center text-xs font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200">
-                          <UserX className="w-3.5 h-3.5 mr-1 text-slate-400" />
+                        <span className="inline-flex items-center text-xs font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-full border border-slate-200 dark:border-slate-700">
+                          <UserX className="w-3.5 h-3.5 mr-1 text-slate-400 dark:text-slate-500" />
                           Désactivé
                         </span>
                       )}
@@ -726,8 +726,8 @@ export const SchoolSettingsView: React.FC = () => {
                           onClick={() => handleToggleUserStatus(p.id)}
                           className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition-colors cursor-pointer ${
                             p.actif 
-                              ? 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100' 
-                              : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                              ? 'bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-500/30 hover:bg-rose-100 dark:hover:bg-rose-500/20' 
+                              : 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30 hover:bg-emerald-100 dark:hover:bg-emerald-500/20'
                           }`}
                         >
                           {p.actif ? 'Désactiver le compte' : 'Réactiver le compte'}
@@ -741,45 +741,45 @@ export const SchoolSettingsView: React.FC = () => {
           </div>
 
           {/* FORMULAIRE D'AJOUT D'UN SECRETAIRE */}
-          <form onSubmit={handleAddSecretaire} className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-4">
-            <h4 className="text-xs font-bold text-slate-900 flex items-center uppercase tracking-wider">
-              <UserPlus className="w-4 h-4 mr-1 text-[#FF8200]" />
+          <form onSubmit={handleAddSecretaire} className="p-4 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 rounded-2xl space-y-4">
+            <h4 className="text-xs font-bold text-slate-900 dark:text-slate-50 flex items-center uppercase tracking-wider">
+              <UserPlus className="w-4 h-4 mr-1 text-[#16A34A]" />
               Ajouter un Nouveau Secrétaire / Agent de Caisse
             </h4>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
-                <label className="text-[11px] font-bold text-slate-600">Nom & Prénom Agent *</label>
+                <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300">Nom & Prénom Agent *</label>
                 <input
                   type="text"
                   value={newSecNom}
                   onChange={(e) => setNewSecNom(e.target.value)}
                   placeholder="Ex: Koné Bintou (Secrétaire)"
-                  className="w-full mt-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-1 focus:ring-[#FF8200]"
+                  className="w-full mt-1 px-3 py-2 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium focus:outline-none focus:ring-1 focus:ring-[#16A34A]"
                   required
                 />
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-slate-600">Email de Connexion *</label>
+                <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300">Email de Connexion *</label>
                 <input
                   type="email"
                   value={newSecEmail}
                   onChange={(e) => setNewSecEmail(e.target.value)}
                   placeholder="Ex: bintou.kone@saintemarie.ci"
-                  className="w-full mt-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-1 focus:ring-[#FF8200]"
+                  className="w-full mt-1 px-3 py-2 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium focus:outline-none focus:ring-1 focus:ring-[#16A34A]"
                   required
                 />
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-slate-600">Mot de Passe Initial *</label>
+                <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300">Mot de Passe Initial *</label>
                 <input
                   type="password"
                   value={newSecPassword}
                   onChange={(e) => setNewSecPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full mt-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-1 focus:ring-[#FF8200]"
+                  className="w-full mt-1 px-3 py-2 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium focus:outline-none focus:ring-1 focus:ring-[#16A34A]"
                   required
                 />
               </div>
@@ -787,7 +787,7 @@ export const SchoolSettingsView: React.FC = () => {
 
             <button
               type="submit"
-              className="px-4 py-2 bg-[#1e3a5f] hover:bg-[#162a45] text-white text-xs font-bold rounded-xl shadow-xs inline-flex items-center space-x-1.5 cursor-pointer transition-colors"
+              className="px-4 py-2 bg-[#0F172A] hover:bg-[#0B1120] text-white text-xs font-bold rounded-xl shadow-xs inline-flex items-center space-x-1.5 cursor-pointer transition-colors"
             >
               <UserPlus className="w-4 h-4" />
               <span>Créer le Compte Secrétaire</span>

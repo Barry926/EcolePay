@@ -1,1 +1,144 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
+
+/* Dark mode piloté par la classe .dark sur <html> */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  /* Palette EcolePay CI */
+  --color-brand: #16A34A;
+  --color-brand-dark: #15803D;
+  --color-brand-soft: #DCFCE7;
+}
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+
+  * {
+    /* Transition douce entre light et dark (300ms) */
+    transition-property: background-color, border-color, color, fill, stroke, box-shadow;
+    transition-duration: 300ms;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  body {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: #F9FAFB;
+  }
+  html.dark body {
+    background-color: #0F172A;
+  }
+
+  ::selection {
+    background-color: rgba(22, 163, 74, 0.25);
+    color: inherit;
+  }
+}
+
+/* ================= Animations ================= */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes overlayIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(120%); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes shimmer {
+  0% { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
+}
+@keyframes riseIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeIn { animation: fadeIn 0.25s ease-out both; }
+.animate-modalIn { animation: modalIn 0.32s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-overlayIn { animation: overlayIn 0.25s ease-out both; }
+.animate-toastIn { animation: toastIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-riseIn { animation: riseIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+/* Reveal en cascade pour les cartes du dashboard */
+.stagger > * { animation: riseIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.stagger > *:nth-child(1) { animation-delay: 0.04s; }
+.stagger > *:nth-child(2) { animation-delay: 0.10s; }
+.stagger > *:nth-child(3) { animation-delay: 0.16s; }
+.stagger > *:nth-child(4) { animation-delay: 0.22s; }
+.stagger > *:nth-child(5) { animation-delay: 0.28s; }
+.stagger > *:nth-child(6) { animation-delay: 0.34s; }
+
+/* ================= Skeleton loaders ================= */
+.skeleton {
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 1000px 100%;
+  animation: shimmer 1.6s linear infinite;
+  border-radius: 10px;
+}
+html.dark .skeleton {
+  background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+  background-size: 1000px 100%;
+}
+
+/* Effet de survol premium sur les cartes */
+.card-hover {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+}
+
+/* Reveal au scroll (landing) */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+.reveal.in-view { opacity: 1; transform: none; }
+
+@keyframes floaty {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+.animate-floaty { animation: floaty 5s ease-in-out infinite; }
+
+@keyframes gridpan {
+  from { background-position: 0 0; }
+  to { background-position: 44px 44px; }
+}
+
+/* ================= Scrollbars ================= */
+.scrollbar-none { scrollbar-width: none; }
+.scrollbar-none::-webkit-scrollbar { display: none; }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; background-clip: content-box; }
+html.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+  background-clip: content-box;
+}
