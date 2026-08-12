@@ -125,13 +125,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setLoading(true);
     try {
       await withTimeout(signInWithEmailAndPassword(auth, email.trim(), pass));
+      // On ne met pas setLoading(false) ici, on laisse onAuthStateChanged s'en charger
+      // une fois que le profil utilisateur et école seront chargés.
     } catch (error: any) {
+      setLoading(false);
       if (isConnectionError(error)) {
         throw new Error(AUTH_CONNECTION_ERROR);
       }
       throw error;
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -184,7 +185,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setLoading(true);
     try {
       await withTimeout(signInWithPopup(auth, googleProvider));
+      // On laisse onAuthStateChanged gérer la fin du chargement
     } catch (error: any) {
+      setLoading(false);
       if (error?.code === 'auth/popup-closed-by-user') {
         throw error;
       }
@@ -192,8 +195,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw new Error(AUTH_CONNECTION_ERROR);
       }
       throw error;
-    } finally {
-      setLoading(false);
     }
   };
 

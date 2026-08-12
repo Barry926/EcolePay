@@ -9,13 +9,18 @@ import { getStorage } from 'firebase/storage';
 
 // Configuration Firebase avec variables d'environnement Vite
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSy_votre_api_key_ici",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "ecolepay-77447.firebaseapp.com",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "ecolepay-77447",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "ecolepay-77447.appspot.com",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "123456789012",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:123456789012:web:abcdef1234567890"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
+
+// Vérification de la configuration en production
+if (import.meta.env.PROD && !firebaseConfig.apiKey) {
+  console.error("ERREUR CRITIQUE : Les variables d'environnement Firebase (VITE_FIREBASE_*) sont manquantes dans votre déploiement Vercel.");
+}
 
 // Initialisation unique de l'application Firebase
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
