@@ -15,6 +15,12 @@ export interface Etablissement {
   email: string;
   logoUrl?: string;
   devise: 'XOF' | 'FCFA';
+  licence?: {
+    keyMasked: string;
+    status: 'active' | 'expired' | 'invalid';
+    expiresAt?: string | null;
+    validatedAt?: string;
+  };
 }
 
 export interface Eleve {
@@ -34,6 +40,9 @@ export interface Eleve {
   soldeRestant: number;
   estEnRegle: boolean;
   createdAt: string;
+  archived?: boolean;
+  archivedAt?: unknown;
+  archivedBy?: string;
 }
 
 export interface Paiement {
@@ -47,6 +56,8 @@ export interface Paiement {
   referenceTransaction?: string; // Ex: Réf Wave / OM / MTN
   numeroRecu: string;
   datePaiement: string;
+  paidAt?: unknown;
+  createdAt?: unknown;
   statut: StatutPaiement;
   libelleTranche: string; // Ex: Inscription, 1ère Tranche
   effectueParUid: string;
@@ -84,6 +95,12 @@ export interface SchoolSettings {
   emailOfficiel: string;
   logoUrl?: string;
   codeMena: string;
+  licence?: {
+    keyMasked: string;
+    status: 'active' | 'expired' | 'invalid';
+    expiresAt?: string | null;
+    validatedAt?: string;
+  };
   tranches: TrancheConfig[];
   classes: string[];
   personnel: ComptePersonnel[];

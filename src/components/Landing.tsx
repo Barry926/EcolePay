@@ -5,7 +5,6 @@ import {
   Smartphone, Wallet, ChevronDown, Zap, Clock, BellRing, Building2
 } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
-import { useAuth } from '../context/AuthContext';
 
 interface LandingProps {
   onLogin: () => void;
@@ -87,7 +86,6 @@ const DIRECTOR_IMG = 'https://images.unsplash.com/photo-1637684666587-91e51b10a5
 
 export const Landing: React.FC<LandingProps> = ({ onLogin, onRegister }) => {
   useReveal();
-  const { loginDemoUser } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
@@ -184,8 +182,8 @@ export const Landing: React.FC<LandingProps> = ({ onLogin, onRegister }) => {
               <button onClick={onRegister} data-testid="hero-register-btn" className="inline-flex items-center justify-center gap-2 px-6 py-3.5 text-sm font-bold text-white bg-[#16A34A] hover:bg-[#15803D] rounded-xl shadow-lg shadow-emerald-500/25 transition-all hover:-translate-y-0.5 cursor-pointer">
                 Créer mon école gratuitement <ArrowRight className="w-4 h-4" />
               </button>
-              <button onClick={() => loginDemoUser()} data-testid="hero-demo-btn" className="inline-flex items-center justify-center gap-2 px-6 py-3.5 text-sm font-bold text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl transition-all cursor-pointer">
-                <Zap className="w-4 h-4 text-[#16A34A]" /> Voir la démo
+              <button onClick={onLogin} data-testid="hero-demo-btn" className="inline-flex items-center justify-center gap-2 px-6 py-3.5 text-sm font-bold text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl transition-all cursor-pointer">
+                <Zap className="w-4 h-4 text-[#16A34A]" /> Se connecter
               </button>
             </div>
             <div className="mt-8 flex items-center gap-6 text-xs text-slate-500 dark:text-slate-400 font-semibold">
@@ -470,8 +468,8 @@ export const Landing: React.FC<LandingProps> = ({ onLogin, onRegister }) => {
                 <button onClick={onRegister} data-testid="cta-register-btn" className="inline-flex items-center justify-center gap-2 px-7 py-3.5 text-sm font-bold text-[#16A34A] bg-white hover:bg-emerald-50 rounded-xl shadow-lg transition-all hover:-translate-y-0.5 cursor-pointer">
                   Commencer gratuitement <ArrowRight className="w-4 h-4" />
                 </button>
-                <button onClick={() => loginDemoUser()} className="inline-flex items-center justify-center gap-2 px-7 py-3.5 text-sm font-bold text-white bg-white/15 hover:bg-white/25 border border-white/30 rounded-xl transition-all cursor-pointer">
-                  Explorer la démo
+                <button onClick={onLogin} className="inline-flex items-center justify-center gap-2 px-7 py-3.5 text-sm font-bold text-white bg-white/15 hover:bg-white/25 border border-white/30 rounded-xl transition-all cursor-pointer">
+                  Se connecter
                 </button>
               </div>
             </div>
@@ -494,7 +492,7 @@ export const Landing: React.FC<LandingProps> = ({ onLogin, onRegister }) => {
             <ul className="mt-4 space-y-2.5 text-sm text-slate-600 dark:text-slate-300">
               <li><button onClick={() => goTo('#features')} className="hover:text-[#16A34A] cursor-pointer">Fonctionnalités</button></li>
               <li><button onClick={() => goTo('#pricing')} className="hover:text-[#16A34A] cursor-pointer">Tarifs</button></li>
-              <li><button onClick={() => loginDemoUser()} className="hover:text-[#16A34A] cursor-pointer">Démo</button></li>
+              <li><button onClick={onLogin} className="hover:text-[#16A34A] cursor-pointer">Se connecter</button></li>
             </ul>
           </div>
           <div>

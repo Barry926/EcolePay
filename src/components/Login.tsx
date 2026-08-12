@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { ThemeToggle } from './ThemeToggle';
-import { Mail, Lock, ShieldCheck, ArrowRight, AlertCircle, Sparkles } from 'lucide-react';
+import { Mail, Lock, ShieldCheck, ArrowRight, AlertCircle } from 'lucide-react';
 
 interface LoginProps {
   onSwitchToRegister: () => void;
@@ -9,7 +9,7 @@ interface LoginProps {
 }
 
 export const Login: React.FC<LoginProps> = ({ onSwitchToRegister, onBack }) => {
-  const { loginWithEmail, loginWithGoogle, loginDemoUser } = useAuth();
+  const { loginWithEmail, loginWithGoogle } = useAuth();
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -196,18 +196,6 @@ export const Login: React.FC<LoginProps> = ({ onSwitchToRegister, onBack }) => {
             </svg>
             <span>Se connecter avec Google</span>
           </button>
-
-          {/* Bouton d'Accès Démo / Connexion Directe */}
-          <div className="pt-2 border-t border-slate-100 dark:border-slate-800 text-center space-y-2">
-            <button
-              type="button"
-              onClick={() => loginDemoUser(email ? `Groupe Scolaire ${email.split('@')[0]}` : "Groupe Scolaire Sainte-Marie d'Abidjan")}
-              className="w-full py-2.5 px-3 bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 border border-emerald-200 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-xs font-bold rounded-xl flex items-center justify-center space-x-2 transition-colors cursor-pointer"
-            >
-              <Sparkles className="w-4 h-4 text-emerald-600" />
-              <span>Accès Instantané Direct (Mode Directeur / Caisse)</span>
-            </button>
-          </div>
 
           {/* Lien Créer un compte */}
           <div className="text-center pt-2 text-xs text-slate-600 dark:text-slate-300">

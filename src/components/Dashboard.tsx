@@ -48,14 +48,19 @@ import {
   Legend, 
   ResponsiveContainer 
 } from 'recharts';
-import { collection, query, where, onSnapshot, addDoc, doc, deleteDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { addDoc, collection, doc, onSnapshot, runTransaction, serverTimestamp, Timestamp, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Paiement, Eleve, ModePaiement } from '../types';
 import { generatePaymentReceiptPDF, getWhatsAppReminderUrl } from '../utils/pdfGenerator';
+import { formatPaymentDate, isWithinCurrentPeriod, toDate } from '../utils/dateUtils';
 import { SchoolSettingsView } from './SchoolSettingsView';
 
-export const Dashboard: React.FC = () => {
-  const { currentUser, userProfile, schoolProfile, logout, isDemoMode } = useAuth();
+interface DashboardProps {
+  onOpenSubscription?: () => void;
+}
+
+export const Dashboard: React.FC<DashboardProps> = ({ onOpenSubscription }) => {
+  const { currentUser, userProfile, schoolProfile, logout } = useAuth();
   const { notify } = useToast();
 
   // Navigation active tab
@@ -68,13 +73,16 @@ export const Dashboard: React.FC = () => {
   const [selectedClasseFilter, setSelectedClasseFilter] = useState('Toutes');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<'Tous' | 'Payé' | 'Partiel' | 'Impayé'>('Tous');
   const [selectedModeFilter, setSelectedModeFilter] = useState('Tous');
-  const [selectedDateFilter, setSelectedDateFilter] = useState<'Toutes' | "Aujourd'hui" | 'Ce mois'>('Toutes');
+  const [selectedDateFilter, setSelectedDateFilter] = useState<'Toutes' | "Aujourd'hui" | 'Cette semaine' | 'Ce mois' | 'Cette année'>('Toutes');
 
   // Modals state
   const [showAddPaymentModal, setShowAddPaymentModal] = useState(false);
   const [showAddStudentModal, setShowAddStudentModal] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState<Paiement | null>(null);
   const [selectedStudentDetails, setSelectedStudentDetails] = useState<Eleve | null>(null);
+  const [showArchivedStudents, setShowArchivedStudents] = useState(false);
+  const [isCreatingStudent, setIsCreatingStudent] = useState(false);
+  const [isCreatingPayment, setIsCreatingPayment] = useState(false);
 
   // Formulaire Enregistrer un Paiement
   const [pStudentSearch, setPStudentSearch] = useState('');
@@ -100,6 +108,8 @@ export const Dashboard: React.FC = () => {
   const directeurNomComplete = userProfile 
     ? `${userProfile.nom} ${userProfile.prenom}`.trim()
     : (currentUser?.displayName || 'Caisse Secrétariat');
+  const licenceExpiry = schoolProfile?.licence?.expiresAt ? new Date(schoolProfile.licence.expiresAt) : null;
+  const licenceExpiresSoon = Boolean(licenceExpiry && !Number.isNaN(licenceExpiry.getTime()) && licenceExpiry.getTime() >= Date.now() && licenceExpiry.getTime() - Date.now() <= 7 * 24 * 60 * 60 * 1000);
 
   useEffect(() => {
     if (directeurNomComplete && !pCaissier) {
@@ -290,54 +300,70 @@ export const Dashboard: React.FC = () => {
     }
   ];
 
-  const [eleves, setEleves] = useState<Eleve[]>(initialEleves);
-  const [paiements, setPaiements] = useState<(Paiement & { caissierNom?: string })[]>(initialPaiements);
+  const [eleves, setEleves] = useState<Eleve[]>([]);
+  const [archivedEleves, setArchivedEleves] = useState<Eleve[]>([]);
+  const [paiements, setPaiements] = useState<(Paiement & { caissierNom?: string })[]>([]);
 
-  // Synchronisation Firestore en temps réel
+  // Synchronisation Firestore en temps réel, structurée par établissement.
   useEffect(() => {
-    if (!db || isDemoMode) return;
-
-    try {
-      const etablissementId = schoolProfile?.id || userProfile?.etablissementId;
-      
-      if (etablissementId) {
-        // Synchronisation des paiements
-        const qPaiements = query(collection(db, 'paiements'), where('etablissementId', '==', etablissementId));
-        const unsubscribePaiements = onSnapshot(qPaiements, (snapshot) => {
-          if (!snapshot.empty) {
-            const list: (Paiement & { caissierNom?: string })[] = [];
-            snapshot.forEach((docSnap) => {
-              list.push({ id: docSnap.id, ...docSnap.data() } as any);
-            });
-            setPaiements(list);
-          }
-        }, (err) => {
-          console.warn("Notice: Sync Firestore paiements fallback locale:", err);
-        });
-
-        // Synchronisation des élèves
-        const qEleves = query(collection(db, 'eleves'), where('etablissementId', '==', etablissementId));
-        const unsubscribeEleves = onSnapshot(qEleves, (snapshot) => {
-          if (!snapshot.empty) {
-            const list: Eleve[] = [];
-            snapshot.forEach((docSnap) => {
-              list.push({ id: docSnap.id, ...docSnap.data() } as Eleve);
-            });
-            setEleves(list);
-          }
-        }, (err) => {
-          console.warn("Notice: Sync Firestore eleves fallback locale:", err);
-        });
-
-        return () => {
-          unsubscribePaiements();
-          unsubscribeEleves();
-        };
-      }
-    } catch (e) {
-      console.warn("Erreur d'écoute Firestore temps réel:", e);
+    const etablissementId = schoolProfile?.id || userProfile?.etablissementId;
+    if (!etablissementId) {
+      setEleves([]);
+      setArchivedEleves([]);
+      setPaiements([]);
+      return;
     }
-  }, [schoolProfile, userProfile, isDemoMode]);
+
+    const elevesRef = collection(db, 'etablissements', etablissementId, 'eleves');
+    const paiementsRef = collection(db, 'etablissements', etablissementId, 'paiements');
+
+    const unsubscribeEleves = onSnapshot(elevesRef, (snapshot) => {
+      const actifs: Eleve[] = [];
+      const archives: Eleve[] = [];
+
+      snapshot.forEach((docSnap) => {
+        const eleve = { id: docSnap.id, ...docSnap.data() } as Eleve;
+        if (eleve.archived) archives.push(eleve);
+        else actifs.push(eleve);
+      });
+
+      setEleves(actifs);
+      setArchivedEleves(archives);
+    }, () => {
+      notify('Impossible de synchroniser les élèves. Vérifiez votre connexion internet.', 'error');
+    });
+
+    const unsubscribePaiements = onSnapshot(paiementsRef, (snapshot) => {
+      const liste = snapshot.docs.map((docSnap) => {
+        const paiement = { id: docSnap.id, ...docSnap.data() } as Paiement & { caissierNom?: string };
+        const paidAt = paiement.paidAt || paiement.createdAt;
+
+        // Migration non destructive des anciens enregistrements quand leur date peut être interprétée sans ambiguïté.
+        if (!paiement.paidAt) {
+          const legacyDate = toDate(paidAt || paiement.datePaiement);
+          if (legacyDate) {
+            updateDoc(doc(db, 'etablissements', etablissementId, 'paiements', docSnap.id), {
+              paidAt: Timestamp.fromDate(legacyDate),
+              migratedAt: serverTimestamp(),
+            }).catch(() => notify(`La date du paiement ${paiement.numeroRecu} n’a pas pu être migrée automatiquement.`, 'error'));
+          }
+        }
+
+        return {
+          ...paiement,
+          datePaiement: formatPaymentDate(paidAt || paiement.datePaiement),
+        };
+      });
+      setPaiements(liste);
+    }, () => {
+      notify('Impossible de synchroniser les paiements. Vérifiez votre connexion internet.', 'error');
+    });
+
+    return () => {
+      unsubscribeEleves();
+      unsubscribePaiements();
+    };
+  }, [schoolProfile?.id, userProfile?.etablissementId, notify]);
 
   // Formater la date du jour en Français
   const todayFormatted = new Date().toLocaleDateString('fr-FR', {
@@ -389,83 +415,97 @@ export const Dashboard: React.FC = () => {
     { name: 'Lycée (2nd C.)', Encaissé: 10750000, Impayé: 6800000 }
   ];
 
-  // Soumission d'un nouvel Élève (Formulaire "Inscrire un élève")
+  // Inscription d'un élève : une erreur de persistance reste visible et n'ajoute jamais de donnée locale fantôme.
   const handleCreateStudent = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!eNomComplet) return;
+    const etablissementId = schoolProfile?.id || userProfile?.etablissementId;
+    const mTotal = Number(eMontantTotal);
 
-    const mTotal = Number(eMontantTotal) || 0;
-    const etablissementId = schoolProfile?.id || 'EP-ABJ-101';
-    const newMatricule = `26-ABJ-${Math.floor(100 + Math.random() * 900)}`;
+    if (!etablissementId || !currentUser) {
+      notify('Votre session établissement est incomplète. Reconnectez-vous puis réessayez.', 'error');
+      return;
+    }
+    if (!eNomComplet.trim() || !Number.isFinite(mTotal) || mTotal <= 0) {
+      notify('Saisissez le nom complet et un montant de scolarité valide.', 'error');
+      return;
+    }
 
-    const parts = eNomComplet.trim().split(' ');
-    const nomPart = parts[0] || eNomComplet;
-    const prenomsPart = parts.slice(1).join(' ') || '';
-
-    const newStudentData: Omit<Eleve, 'id'> & { etablissementId: string } = {
-      matricule: newMatricule,
+    const [nomPart, ...prenoms] = eNomComplet.trim().split(/\s+/);
+    const newStudentData = {
+      matricule: 'EL-' + crypto.randomUUID().slice(0, 8).toUpperCase(),
       nom: nomPart,
-      prenoms: prenomsPart,
+      prenoms: prenoms.join(' '),
       classe: eClasse,
       cycle: getCycleFromClasse(eClasse),
-      genre: 'M',
-      nomTuteur: eNomTuteur || 'Tuteur Légal',
-      telTuteur: eTelTuteur || '+225 07 00 00 00 00',
+      genre: 'M' as const,
+      nomTuteur: eNomTuteur.trim() || 'Tuteur légal',
+      telTuteur: eTelTuteur.trim(),
       montantTotalScolarite: mTotal,
       montantPaye: 0,
       soldeRestant: mTotal,
       estEnRegle: false,
-      createdAt: new Date().toISOString().split('T')[0],
-      etablissementId
+      archived: false,
+      createdAt: serverTimestamp(),
     };
 
-    let createdId = `EL-${Date.now()}`;
-
-    if (!isDemoMode && db) {
-      try {
-        const docRef = await addDoc(collection(db, 'eleves'), {
-          ...newStudentData,
-          createdAt: serverTimestamp()
-        });
-        createdId = docRef.id;
-      } catch (err) {
-        console.warn("Notice: Firestore addDoc eleve failed, local update only:", err);
-      }
+    setIsCreatingStudent(true);
+    try {
+      await addDoc(collection(db, 'etablissements', etablissementId, 'eleves'), newStudentData);
+      setENomComplet('');
+      setEClasse('6ème A');
+      setETelTuteur('');
+      setENomTuteur('');
+      setEMontantTotal('250000');
+      setShowAddStudentModal(false);
+      notify('Élève inscrit avec succès.', 'success');
+    } catch (error) {
+      console.error('Inscription élève impossible.', error);
+      notify("Impossible d'inscrire l'élève. Vérifiez votre connexion internet et réessayez.", 'error');
+    } finally {
+      setIsCreatingStudent(false);
     }
-
-    const createdEleveObj: Eleve = {
-      id: createdId,
-      ...newStudentData
-    };
-
-    setEleves(prev => [createdEleveObj, ...prev]);
-    setENomComplet('');
-    setEClasse('6ème A');
-    setETelTuteur('');
-    setENomTuteur('');
-    setEMontantTotal('250000');
-    setShowAddStudentModal(false);
-    notify(`Élève ${createdEleveObj.nom} ${createdEleveObj.prenoms} inscrit avec succès.`, 'success');
   };
 
-  // Suppression d'un élève avec confirmation & Firestore
-  const handleDeleteStudent = async (student: Eleve) => {
-    const confirmation = window.confirm(
-      `Êtes-vous sûr de vouloir supprimer définitivement l'élève ${student.nom} ${student.prenoms} (${student.matricule}) ?`
-    );
-    if (!confirmation) return;
+  const handleArchiveStudent = async (student: Eleve) => {
+    const etablissementId = schoolProfile?.id || userProfile?.etablissementId;
+    if (!etablissementId || !currentUser) {
+      notify('Votre session établissement est incomplète. Reconnectez-vous puis réessayez.', 'error');
+      return;
+    }
+    if (!window.confirm('Archiver l’élève ' + student.nom + ' ' + student.prenoms + ' ? Ses paiements resteront conservés.')) return;
 
-    if (!isDemoMode && db && student.id) {
-      try {
-        await deleteDoc(doc(db, 'eleves', student.id));
-      } catch (err) {
-        console.warn("Notice: Firestore deleteDoc eleve failed, local update only:", err);
-      }
+    try {
+      await updateDoc(doc(db, 'etablissements', etablissementId, 'eleves', student.id), {
+        archived: true,
+        archivedAt: serverTimestamp(),
+        archivedBy: currentUser.uid,
+      });
+      setSelectedStudentDetails(null);
+      notify('Élève archivé. Les paiements associés sont conservés.', 'success');
+    } catch (error) {
+      console.error('Archivage élève impossible.', error);
+      notify("Impossible d'archiver l'élève. Vérifiez votre connexion internet et réessayez.", 'error');
+    }
+  };
+
+  const handleRestoreStudent = async (student: Eleve) => {
+    const etablissementId = schoolProfile?.id || userProfile?.etablissementId;
+    if (!etablissementId || !currentUser) {
+      notify('Votre session établissement est incomplète. Reconnectez-vous puis réessayez.', 'error');
+      return;
     }
 
-    setEleves(prev => prev.filter(e => e.id !== student.id));
-    if (selectedStudentDetails?.id === student.id) {
+    try {
+      await updateDoc(doc(db, 'etablissements', etablissementId, 'eleves', student.id), {
+        archived: false,
+        archivedAt: null,
+        archivedBy: null,
+      });
       setSelectedStudentDetails(null);
+      notify('Élève désarchivé avec succès.', 'success');
+    } catch (error) {
+      console.error('Désarchivage élève impossible.', error);
+      notify("Impossible de désarchiver l'élève. Vérifiez votre connexion internet et réessayez.", 'error');
     }
   };
 
@@ -487,113 +527,112 @@ export const Dashboard: React.FC = () => {
     setShowAddPaymentModal(true);
   };
 
-  // Soumission d'un nouveau Paiement (Firestore + State + Reçu PDF)
+  // Paiement atomique : le reçu, l'écriture et le solde de l'élève sont modifiés ensemble.
   const handleCreatePayment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!pNomEleve || !pMontant) return;
-
+    const etablissementId = schoolProfile?.id || userProfile?.etablissementId;
     const montantNum = Number(pMontant);
-    const generatedRecu = `REC-2026-${Math.floor(1000 + Math.random() * 9000)}`;
-    const etablissementId = schoolProfile?.id || 'EP-ABJ-101';
-    
-    // Horodatage automatique
-    const now = new Date();
-    const currentDateFormatted = `${now.toLocaleDateString('fr-FR')} ${now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
+    const selectedStudent = pSelectedStudent || eleves.find((el) => el.id === targetStudentId);
 
-    const caissierFinal = pCaissier || directeurNomComplete || 'Caissier / Secrétariat';
+    if (!etablissementId || !currentUser || !selectedStudent) {
+      notify('Sélectionnez un élève existant avant de valider le paiement.', 'error');
+      return;
+    }
+    if (!Number.isFinite(montantNum) || montantNum <= 0) {
+      notify('Saisissez un montant de paiement strictement positif.', 'error');
+      return;
+    }
+    if (montantNum > selectedStudent.soldeRestant) {
+      notify('Le montant ne peut pas dépasser le solde dû de ' + selectedStudent.soldeRestant.toLocaleString('fr-FR') + ' FCFA.', 'error');
+      return;
+    }
+    if (pMode !== 'Espèces' && !pRef.trim()) {
+      notify('La référence de transaction est obligatoire pour un paiement Mobile Money.', 'error');
+      return;
+    }
 
-    const newPaymentData = {
-      eleveId: targetStudentId || `EL-${Date.now().toString().slice(-4)}`,
-      matriculeEleve: pSelectedStudent?.matricule || `26-ABJ-${Math.floor(100 + Math.random() * 900)}`,
-      nomEleveComplete: pNomEleve,
-      classe: pClasse,
-      montant: montantNum,
-      modePaiement: pMode,
-      referenceTransaction: pRef || `${pMode.toUpperCase()}-${Math.floor(10000 + Math.random() * 90000)}`,
-      numeroRecu: generatedRecu,
-      datePaiement: currentDateFormatted,
-      statut: 'Validé' as const,
-      libelleTranche: pTranche || 'Règlement Scolarité',
-      effectueParUid: currentUser?.uid || 'admin',
-      caissierNom: caissierFinal,
-      etablissementId
-    };
+    setIsCreatingPayment(true);
+    try {
+      const result = await runTransaction(db, async (transaction) => {
+        const studentRef = doc(db, 'etablissements', etablissementId, 'eleves', selectedStudent.id);
+        const receiptCounterRef = doc(db, 'etablissements', etablissementId, 'config', 'lastReceiptNumber');
+        const paymentRef = doc(collection(db, 'etablissements', etablissementId, 'paiements'));
+        const studentSnap = await transaction.get(studentRef);
+        const counterSnap = await transaction.get(receiptCounterRef);
 
-    // 1. Tente écriture Firestore du paiement
-    if (!isDemoMode && db) {
-      try {
-        await addDoc(collection(db, 'paiements'), {
-          ...newPaymentData,
-          createdAt: serverTimestamp()
+        if (!studentSnap.exists()) throw new Error('STUDENT_NOT_FOUND');
+        const studentData = studentSnap.data() as Eleve;
+        if (studentData.archived) throw new Error('STUDENT_ARCHIVED');
+
+        const currentBalance = Number(studentData.soldeRestant || 0);
+        if (montantNum > currentBalance) throw new Error('AMOUNT_EXCEEDS_BALANCE');
+
+        const now = Timestamp.now();
+        const year = now.toDate().getFullYear().toString();
+        const counters = (counterSnap.data()?.counters || {}) as Record<string, number>;
+        const nextReceiptNumber = Number(counters[year] || 0) + 1;
+        const numeroRecu = 'REC-' + year + '-' + String(nextReceiptNumber).padStart(4, '0');
+        const newMontantPaye = Number(studentData.montantPaye || 0) + montantNum;
+        const newSoldeRestant = Math.max(0, Number(studentData.montantTotalScolarite || 0) - newMontantPaye);
+        const caissierFinal = pCaissier.trim() || directeurNomComplete || 'Caisse / Secrétariat';
+
+        const paymentData = {
+          eleveId: selectedStudent.id,
+          matriculeEleve: studentData.matricule,
+          nomEleveComplete: (studentData.nom + ' ' + studentData.prenoms).trim(),
+          classe: studentData.classe,
+          montant: montantNum,
+          modePaiement: pMode,
+          referenceTransaction: pRef.trim() || 'CAISSE-' + numeroRecu,
+          numeroRecu,
+          datePaiement: formatPaymentDate(now.toDate()),
+          paidAt: now,
+          createdAt: now,
+          statut: 'Validé' as const,
+          libelleTranche: pTranche || 'Règlement scolarité',
+          effectueParUid: currentUser.uid,
+          caissierNom: caissierFinal,
+        };
+
+        transaction.set(paymentRef, paymentData);
+        transaction.update(studentRef, {
+          montantPaye: newMontantPaye,
+          soldeRestant: newSoldeRestant,
+          estEnRegle: newSoldeRestant === 0,
+          updatedAt: now,
         });
-      } catch (err) {
-        console.warn("Notice: Firestore addDoc payment failed, local update only:", err);
-      }
+        transaction.set(receiptCounterRef, {
+          counters: { [year]: nextReceiptNumber },
+          updatedAt: now,
+        }, { merge: true });
+
+        return {
+          payment: { id: paymentRef.id, ...paymentData },
+          student: { ...studentData, id: selectedStudent.id, montantPaye: newMontantPaye, soldeRestant: newSoldeRestant, estEnRegle: newSoldeRestant === 0 } as Eleve,
+        };
+      });
+
+      setSelectedReceipt(result.payment);
+      generatePaymentReceiptPDF(result.payment, result.student, schoolProfile, result.payment.caissierNom);
+      setPNomEleve('');
+      setPMontant('');
+      setPRef('');
+      setPStudentSearch('');
+      setPSelectedStudent(null);
+      setTargetStudentId(null);
+      setShowAddPaymentModal(false);
+      notify('Paiement enregistré. Reçu ' + result.payment.numeroRecu + ' généré.', 'success');
+    } catch (error: any) {
+      console.error('Transaction de paiement impossible.', error);
+      const message = error?.message === 'AMOUNT_EXCEEDS_BALANCE'
+        ? 'Le paiement dépasse le solde restant de cet élève.'
+        : error?.message === 'STUDENT_ARCHIVED'
+          ? 'Cet élève est archivé et ne peut pas recevoir de paiement.'
+          : "Impossible d'enregistrer le paiement. Aucune modification n'a été effectuée.";
+      notify(message, 'error');
+    } finally {
+      setIsCreatingPayment(false);
     }
-
-    // 2. Mise à jour de l'élève correspondant dans Firestore & State
-    const matchingStudent = pSelectedStudent || eleves.find(el => 
-      el.id === targetStudentId || 
-      `${el.nom} ${el.prenoms}`.toLowerCase().trim() === pNomEleve.toLowerCase().trim()
-    );
-
-    let updatedEleve: Eleve | null = null;
-
-    if (matchingStudent) {
-      const newMontantPaye = (matchingStudent.montantPaye || 0) + montantNum;
-      const newSoldeRestant = Math.max(0, matchingStudent.montantTotalScolarite - newMontantPaye);
-      const isEnRegle = newSoldeRestant <= 0;
-
-      updatedEleve = {
-        ...matchingStudent,
-        montantPaye: newMontantPaye,
-        soldeRestant: newSoldeRestant,
-        estEnRegle: isEnRegle
-      };
-
-      if (!isDemoMode && db && matchingStudent.id) {
-        try {
-          const eleveRef = doc(db, 'eleves', matchingStudent.id);
-          await updateDoc(eleveRef, {
-            montantPaye: newMontantPaye,
-            soldeRestant: newSoldeRestant,
-            estEnRegle: isEnRegle
-          });
-        } catch (err) {
-          console.warn("Notice: Firestore updateDoc eleve failed:", err);
-        }
-      }
-
-      setEleves(prev => prev.map(el => el.id === matchingStudent.id ? updatedEleve! : el));
-    }
-
-    const createdPaymentObj: Paiement & { caissierNom?: string } = {
-      id: `PAY-${Date.now()}`,
-      ...newPaymentData
-    };
-
-    setPaiements(prev => [createdPaymentObj, ...prev]);
-
-    // Afficher directement le reçu après validation
-    setSelectedReceipt(createdPaymentObj);
-
-    // Téléchargement automatique immédiat du reçu PDF
-    generatePaymentReceiptPDF(
-      createdPaymentObj,
-      updatedEleve || matchingStudent,
-      schoolProfile?.nom || "Groupe Scolaire Sainte-Marie d'Abidjan",
-      caissierFinal
-    );
-
-    // Réinitialisation des formulaires
-    setPNomEleve('');
-    setPMontant('');
-    setPRef('');
-    setPStudentSearch('');
-    setPSelectedStudent(null);
-    setTargetStudentId(null);
-    setShowAddPaymentModal(false);
-    notify(`Paiement de ${montantNum.toLocaleString('fr-FR')} FCFA enregistré · Reçu ${generatedRecu} généré.`, 'success');
   };
 
   // Badge Couleur pour Mode de paiement
@@ -614,38 +653,29 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  // Élèves filtrés pour la recherche
-  const filteredEleves = eleves.filter(el => {
-    const nomComplet = `${el.nom} ${el.prenoms} ${el.matricule} ${el.telTuteur || ''}`.toLowerCase();
+  // Les élèves archivés sont isolés de toutes les opérations courantes, mais restent consultables.
+  const displayedStudents = showArchivedStudents ? archivedEleves : eleves;
+  const filteredEleves = displayedStudents.filter((el) => {
+    const nomComplet = [el.nom, el.prenoms, el.matricule, el.telTuteur || ''].join(' ').toLowerCase();
     const matchesSearch = nomComplet.includes(searchTerm.toLowerCase());
     const matchesClasse = selectedClasseFilter === 'Toutes' || el.classe === selectedClasseFilter;
-    
     const status = getStatutPaiement(el);
     const matchesStatus = selectedStatusFilter === 'Tous' || status === selectedStatusFilter;
-
     return matchesSearch && matchesClasse && matchesStatus;
   });
 
-  // Élèves filtrés pour le dropdown du modal de paiement
-  const studentSearchDropdownList = eleves.filter(el => {
+  const studentSearchDropdownList = eleves.filter((el) => {
     if (!pStudentSearch) return true;
     const term = pStudentSearch.toLowerCase();
-    return `${el.nom} ${el.prenoms} ${el.matricule} ${el.classe}`.toLowerCase().includes(term);
+    return [el.nom, el.prenoms, el.matricule, el.classe].join(' ').toLowerCase().includes(term);
   });
 
-  // Paiements filtrés avec Filtres Avancés Date, Classe, Mode, Recherche
-  const filteredPaiements = paiements.filter(p => {
-    const matchesSearch = `${p.nomEleveComplete} ${p.matriculeEleve} ${p.numeroRecu} ${p.referenceTransaction || ''} ${p.caissierNom || ''}`.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredPaiements = paiements.filter((p) => {
+    const matchesSearch = [p.nomEleveComplete, p.matriculeEleve, p.numeroRecu, p.referenceTransaction || '', p.caissierNom || ''].join(' ').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesMode = selectedModeFilter === 'Tous' || p.modePaiement === selectedModeFilter;
     const matchesClasse = selectedClasseFilter === 'Toutes' || p.classe === selectedClasseFilter;
-    
-    let matchesDate = true;
-    if (selectedDateFilter === "Aujourd'hui") {
-      matchesDate = p.datePaiement.includes("Aujourd'hui") || p.datePaiement.includes(new Date().toLocaleDateString('fr-FR'));
-    } else if (selectedDateFilter === 'Ce mois') {
-      matchesDate = true; // Tous les récents
-    }
-
+    const matchesDate = selectedDateFilter === 'Toutes'
+      || isWithinCurrentPeriod(p.paidAt || p.createdAt || p.datePaiement, selectedDateFilter);
     return matchesSearch && matchesMode && matchesClasse && matchesDate;
   });
 
@@ -694,14 +724,10 @@ export const Dashboard: React.FC = () => {
           </button>
         </div>
         <div className="px-4 pt-4">
-          <div className={`p-2.5 rounded-xl border text-xs font-semibold flex items-center justify-between ${
-            isDemoMode 
-              ? 'bg-amber-500/20 border-amber-400/30 text-amber-200' 
-              : 'bg-emerald-500/20 border-emerald-400/30 text-emerald-200'
-          }`}>
+          <div className="p-2.5 rounded-xl border text-xs font-semibold flex items-center justify-between bg-emerald-500/20 border-emerald-400/30 text-emerald-200">
             <span className="flex items-center">
-              <span className={`w-2 h-2 rounded-full mr-2 ${isDemoMode ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400 animate-pulse'}`} />
-              {isDemoMode ? 'Mode Démo Actif' : 'Firebase Sync Actif'}
+              <span className="w-2 h-2 rounded-full mr-2 bg-emerald-400 animate-pulse" />
+              Synchronisation Firebase active
             </span>
           </div>
         </div>
@@ -757,6 +783,16 @@ export const Dashboard: React.FC = () => {
             <span>Paramètres École</span>
           </button>
 
+          {onOpenSubscription && (
+            <button
+              onClick={() => { onOpenSubscription(); setSidebarOpen(false); }}
+              className="w-full flex items-center space-x-3 p-3 rounded-xl text-sm font-bold text-emerald-200 hover:bg-[#1E293B]/60 hover:text-white transition-all cursor-pointer"
+            >
+              <Wallet className="w-5 h-5 shrink-0" />
+              <span>Abonnement</span>
+            </button>
+          )}
+
         </nav>
 
         {/* Bouton Déconnexion en bas avec résumé du compte */}
@@ -807,7 +843,7 @@ export const Dashboard: React.FC = () => {
               <div className="flex items-center space-x-2 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 <span className="font-bold text-[#16A34A] flex items-center min-w-0">
                   <Building2 className="w-3.5 h-3.5 mr-1 text-[#16A34A] shrink-0" />
-                  <span className="truncate">{schoolProfile?.nom || "Groupe Scolaire Sainte-Marie d'Abidjan"}</span>
+                  <span className="truncate">{schoolProfile?.nom || "Établissement scolaire"}</span>
                 </span>
                 <span className="hidden sm:inline">•</span>
                 <span className="hidden sm:flex items-center text-slate-600 dark:text-slate-300 font-medium">
@@ -853,6 +889,12 @@ export const Dashboard: React.FC = () => {
 
         {/* CONTENU SELON ONGLET SELECTIONNE */}
         <div className="flex-1 p-6 space-y-6 overflow-y-auto">
+          {licenceExpiresSoon && licenceExpiry && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-amber-300 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 p-4 text-amber-900 dark:text-amber-200">
+              <div><p className="text-sm font-black">Votre abonnement expire le {licenceExpiry.toLocaleDateString('fr-FR')}.</p><p className="mt-0.5 text-xs font-semibold">Renouvelez maintenant pour ne pas perdre l’accès aux fonctionnalités premium.</p></div>
+              {onOpenSubscription && <button onClick={onOpenSubscription} className="shrink-0 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-black">Renouveler</button>}
+            </div>
+          )}
 
           {/* VUE 1 : TABLEAU DE BORD (OVERVIEW) */}
           {activeTab === 'overview' && (
@@ -1068,7 +1110,7 @@ export const Dashboard: React.FC = () => {
                               onClick={() => generatePaymentReceiptPDF(
                                 p, 
                                 eleves.find(e => e.id === p.eleveId || e.matricule === p.matriculeEleve),
-                                schoolProfile?.nom || "Groupe Scolaire Sainte-Marie d'Abidjan",
+                                schoolProfile,
                                 p.caissierNom || directeurNomComplete
                               )}
                               className="px-2.5 py-1.5 bg-[#0F172A] hover:bg-[#0B1120] text-white text-xs font-bold rounded-lg shadow-xs inline-flex items-center space-x-1 cursor-pointer transition-colors"
@@ -1188,10 +1230,17 @@ export const Dashboard: React.FC = () => {
                       </select>
                     </div>
 
-                    {/* Bouton "Inscrire un élève" */}
+                    <button
+                      type="button"
+                      onClick={() => setShowArchivedStudents((value) => !value)}
+                      className="px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer transition-all"
+                    >
+                      {showArchivedStudents ? 'Voir les élèves actifs' : 'Voir les élèves archivés (' + archivedEleves.length + ')'}
+                    </button>
                     <button
                       onClick={() => setShowAddStudentModal(true)}
-                      className="px-4 py-2 bg-[#16A34A] hover:bg-[#15803D] text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-500/20 flex items-center space-x-1.5 cursor-pointer transition-all"
+                      disabled={showArchivedStudents}
+                      className="px-4 py-2 bg-[#16A34A] hover:bg-[#15803D] text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-500/20 flex items-center space-x-1.5 cursor-pointer transition-all disabled:opacity-50"
                     >
                       <Plus className="w-4 h-4" />
                       <span>Inscrire un Élève</span>
@@ -1281,7 +1330,7 @@ export const Dashboard: React.FC = () => {
                                   {/* Bouton Rappel WhatsApp pour impayés */}
                                   {el.soldeRestant > 0 && (
                                     <a
-                                      href={getWhatsAppReminderUrl(el, schoolProfile?.nom || "Groupe Scolaire Sainte-Marie d'Abidjan")}
+                                      href={getWhatsAppReminderUrl(el, schoolProfile?.nom || 'Établissement scolaire')}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       className="px-2.5 py-1.5 bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs font-bold rounded-xl shadow-xs inline-flex items-center space-x-1 cursor-pointer transition-all"
@@ -1292,14 +1341,15 @@ export const Dashboard: React.FC = () => {
                                     </a>
                                   )}
 
-                                  {/* Bouton Règlement Rapide */}
-                                  <button
-                                    onClick={() => handleOpenPaymentForStudent(el)}
-                                    className="px-2.5 py-1.5 bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold rounded-xl shadow-xs inline-flex items-center space-x-1 cursor-pointer transition-all"
-                                  >
-                                    <CreditCard className="w-3.5 h-3.5" />
-                                    <span>Régler</span>
-                                  </button>
+                                  {!showArchivedStudents && (
+                                    <button
+                                      onClick={() => handleOpenPaymentForStudent(el)}
+                                      className="px-2.5 py-1.5 bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold rounded-xl shadow-xs inline-flex items-center space-x-1 cursor-pointer transition-all"
+                                    >
+                                      <CreditCard className="w-3.5 h-3.5" />
+                                      <span>Régler</span>
+                                    </button>
+                                  )}
 
                                   {/* Voir Fiche Élève */}
                                   <button
@@ -1399,7 +1449,9 @@ export const Dashboard: React.FC = () => {
                       >
                         <option value="Toutes">Toutes les dates</option>
                         <option value="Aujourd'hui">Aujourd'hui</option>
+                        <option value="Cette semaine">Cette semaine</option>
                         <option value="Ce mois">Ce mois-ci</option>
+                        <option value="Cette année">Cette année</option>
                       </select>
                     </div>
 
@@ -1506,7 +1558,7 @@ export const Dashboard: React.FC = () => {
                                   onClick={() => generatePaymentReceiptPDF(
                                     p,
                                     eleves.find(e => e.id === p.eleveId || e.matricule === p.matriculeEleve),
-                                    schoolProfile?.nom || "Groupe Scolaire Sainte-Marie d'Abidjan",
+                                    schoolProfile,
                                     p.caissierNom || directeurNomComplete
                                   )}
                                   className="px-2.5 py-1.5 bg-[#0F172A] hover:bg-[#0B1120] text-white text-xs font-bold rounded-lg shadow-xs inline-flex items-center space-x-1 cursor-pointer transition-colors"
@@ -1530,7 +1582,7 @@ export const Dashboard: React.FC = () => {
 
           {/* VUE 4 : PARAMETRES ETABLISSEMENT */}
           {activeTab === 'parametres' && (
-            <SchoolSettingsView />
+            <SchoolSettingsView onOpenSubscription={onOpenSubscription} />
           )}
 
         </div>
@@ -1632,9 +1684,10 @@ export const Dashboard: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-[#0F172A] hover:bg-[#0B1120] text-white rounded-xl text-xs font-bold shadow-md cursor-pointer transition-all"
+                  disabled={isCreatingStudent}
+                  className="px-5 py-2 bg-[#0F172A] hover:bg-[#0B1120] text-white rounded-xl text-xs font-bold shadow-md cursor-pointer transition-all disabled:opacity-50"
                 >
-                  Valider l'Inscription
+                  {isCreatingStudent ? 'Inscription en cours…' : "Valider l'Inscription"}
                 </button>
               </div>
             </form>
@@ -1708,7 +1761,7 @@ export const Dashboard: React.FC = () => {
 
               {selectedStudentDetails.soldeRestant > 0 && (
                 <a
-                  href={getWhatsAppReminderUrl(selectedStudentDetails, schoolProfile?.nom || "Groupe Scolaire Sainte-Marie d'Abidjan")}
+                  href={getWhatsAppReminderUrl(selectedStudentDetails, schoolProfile?.nom || 'Établissement scolaire')}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="px-3 py-2 bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold rounded-xl shadow-xs inline-flex items-center justify-center space-x-1.5 transition-all cursor-pointer shrink-0"
@@ -1758,7 +1811,7 @@ export const Dashboard: React.FC = () => {
                                 onClick={() => generatePaymentReceiptPDF(
                                   p,
                                   selectedStudentDetails,
-                                  schoolProfile?.nom || "Groupe Scolaire Sainte-Marie d'Abidjan",
+                                  schoolProfile,
                                   p.caissierNom || directeurNomComplete
                                 )}
                                 className="px-2 py-1 bg-[#0F172A] hover:bg-[#0B1120] text-white text-[11px] font-bold rounded-md inline-flex items-center space-x-1 cursor-pointer"
@@ -1778,11 +1831,11 @@ export const Dashboard: React.FC = () => {
             {/* Actions Modal */}
             <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
               <button
-                onClick={() => handleDeleteStudent(selectedStudentDetails)}
+                onClick={() => selectedStudentDetails.archived ? handleRestoreStudent(selectedStudentDetails) : handleArchiveStudent(selectedStudentDetails)}
                 className="px-3.5 py-2 bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 text-xs font-bold rounded-xl border border-rose-200 dark:border-rose-500/30 flex items-center space-x-1 cursor-pointer transition-colors"
               >
                 <Trash2 className="w-4 h-4" />
-                <span>Supprimer l'Élève</span>
+                <span>{selectedStudentDetails.archived ? "Désarchiver l'élève" : "Archiver l'élève"}</span>
               </button>
 
               <div className="flex items-center space-x-2">
@@ -2034,10 +2087,14 @@ export const Dashboard: React.FC = () => {
 
                 <button
                   type="submit"
-                  className="px-6 py-2.5 bg-[#16A34A] hover:bg-[#15803D] text-white rounded-xl text-xs font-bold shadow-lg shadow-emerald-500/20 flex items-center space-x-1.5 cursor-pointer transition-all"
+                  disabled={isCreatingPayment}
+                  className="px-6 py-2.5 bg-[#16A34A] hover:bg-[#15803D] text-white rounded-xl text-xs font-bold shadow-lg shadow-emerald-500/20 flex items-center space-x-1.5 cursor-pointer transition-all disabled:opacity-50"
                 >
-                  <Check className="w-4 h-4" />
-                  <span>Valider & Générer Reçu PDF</span>
+                  {isCreatingPayment ? (
+                    <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /><span>Enregistrement…</span></>
+                  ) : (
+                    <><Check className="w-4 h-4" /><span>Valider & Générer Reçu PDF</span></>
+                  )}
                 </button>
               </div>
 
@@ -2066,7 +2123,7 @@ export const Dashboard: React.FC = () => {
                   EP
                 </div>
                 <h3 className="text-xl font-black text-slate-900 dark:text-slate-50 uppercase tracking-tight">
-                  {schoolProfile?.nom || "Groupe Scolaire Sainte-Marie d'Abidjan"}
+                  {schoolProfile?.nom || 'Établissement scolaire'}
                 </h3>
               </div>
               <p className="text-xs font-bold text-slate-600 dark:text-slate-300">
@@ -2149,7 +2206,7 @@ export const Dashboard: React.FC = () => {
                 onClick={() => generatePaymentReceiptPDF(
                   selectedReceipt,
                   eleves.find(e => e.id === selectedReceipt.eleveId || e.matricule === selectedReceipt.matriculeEleve),
-                  schoolProfile?.nom || "Groupe Scolaire Sainte-Marie d'Abidjan",
+                  schoolProfile,
                   selectedReceipt.caissierNom || directeurNomComplete
                 )}
                 className="px-5 py-2.5 bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold rounded-xl shadow-md flex items-center space-x-2 cursor-pointer transition-all"

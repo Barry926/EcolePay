@@ -1,194 +1,161 @@
 import jsPDF from 'jspdf';
-import { Paiement, Eleve } from '../types';
+import { Etablissement, Eleve, Paiement } from '../types';
+import { formatPaymentDate } from './dateUtils';
 
-export const generatePaymentReceiptPDF = (
+async function addSchoolLogo(doc: jsPDF, logoUrl?: string): Promise<boolean> {
+  if (!logoUrl) return false;
+
+  try {
+    const image = new Image();
+    image.crossOrigin = 'anonymous';
+    await new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve();
+      image.onerror = () => reject(new Error('LOGO_LOAD_FAILED'));
+      image.src = logoUrl;
+    });
+    doc.addImage(image, 'PNG', 14, 9, 22, 22, undefined, 'FAST');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export const generatePaymentReceiptPDF = async (
   paiement: Paiement,
-  eleve?: Eleve | null,
-  etablissementNom: string = "Groupe Scolaire Sainte-Marie d'Abidjan",
-  caissierNom: string = "Agent Caisse / Comptabilité"
+  eleve: Eleve | null | undefined,
+  etablissement: Etablissement | null | undefined,
+  caissierNom: string,
 ) => {
   const doc = new jsPDF();
+  const primary = [15, 23, 42] as const;
+  const green = [22, 163, 74] as const;
+  const slate = [51, 65, 85] as const;
+  const light = [248, 250, 252] as const;
+  const schoolName = etablissement?.nom || 'Établissement scolaire';
+  const schoolAddress = etablissement?.adresse || 'Adresse non renseignée';
+  const schoolPhone = etablissement?.telephone || 'Téléphone non renseigné';
+  const paymentDate = formatPaymentDate(paiement.paidAt || paiement.createdAt || paiement.datePaiement);
+  const studentName = paiement.nomEleveComplete || `${eleve?.nom || ''} ${eleve?.prenoms || ''}`.trim();
 
-  // Colors
-  const primaryBlue = [30, 58, 95]; // #1e3a5f
-  const accentOrange = [255, 130, 0]; // #FF8200
-  const darkGray = [30, 41, 59];
-  const lightBg = [248, 250, 252];
+  doc.setFillColor(...primary);
+  doc.rect(0, 0, 210, 43, 'F');
+  doc.setFillColor(...green);
+  doc.rect(0, 43, 210, 3, 'F');
 
-  // Header Banner
-  doc.setFillColor(primaryBlue[0], primaryBlue[1], primaryBlue[2]);
-  doc.rect(0, 0, 210, 36, 'F');
-
-  // Orange accent strip
-  doc.setFillColor(accentOrange[0], accentOrange[1], accentOrange[2]);
-  doc.rect(0, 36, 210, 3, 'F');
-
-  // School Title & Header Text
+  const hasLogo = await addSchoolLogo(doc, etablissement?.logoUrl);
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(18);
-  doc.text('ECOLEPAY CI - REÇU DE PAIEMENT', 14, 18);
-
-  doc.setFontSize(10);
+  doc.setFontSize(15);
+  doc.text(schoolName.toUpperCase(), hasLogo ? 42 : 14, 17);
   doc.setFont('helvetica', 'normal');
-  doc.text(etablissementNom.toUpperCase(), 14, 27);
-  doc.text("RÉPUBLIQUE DE CÔTE D'IVOIRE • MINISTÈRE DE L'ÉDUCATION NATIONALE", 14, 32);
+  doc.setFontSize(8);
+  doc.text(schoolAddress, hasLogo ? 42 : 14, 24, { maxWidth: 108 });
+  doc.text(`Tél. ${schoolPhone}`, hasLogo ? 42 : 14, 30);
 
-  // Receipt Number & Date (Right aligned in header)
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
-  doc.text(`N° REÇU: ${paiement.numeroRecu}`, 196, 18, { align: 'right' });
-  doc.setFontSize(9);
+  doc.text('REÇU DE PAIEMENT', 196, 16, { align: 'right' });
   doc.setFont('helvetica', 'normal');
-  doc.text(`Date: ${paiement.datePaiement}`, 196, 26, { align: 'right' });
+  doc.setFontSize(8);
+  doc.text(`N° ${paiement.numeroRecu}`, 196, 24, { align: 'right' });
+  doc.text(paymentDate, 196, 30, { align: 'right' });
 
-  // Body Container
-  let y = 48;
-
-  // Student & Payment Info Card
-  doc.setFillColor(lightBg[0], lightBg[1], lightBg[2]);
+  let y = 57;
+  doc.setFillColor(...light);
   doc.setDrawColor(226, 232, 240);
-  doc.roundedRect(14, y, 182, 54, 3, 3, 'FD');
-
-  doc.setTextColor(primaryBlue[0], primaryBlue[1], primaryBlue[2]);
+  doc.roundedRect(14, y, 182, 57, 3, 3, 'FD');
+  doc.setTextColor(...primary);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.text("INFORMATIONS DE L'ÉLÈVE", 20, y + 10);
-  doc.text("DÉTAILS DU PAIEMENT", 110, y + 10);
-
+  doc.setFontSize(10);
+  doc.text('INFORMATIONS ÉLÈVE', 20, y + 10);
+  doc.text('DÉTAILS DU PAIEMENT', 111, y + 10);
   doc.setDrawColor(203, 213, 225);
   doc.line(20, y + 13, 100, y + 13);
-  doc.line(110, y + 13, 190, y + 13);
+  doc.line(111, y + 13, 190, y + 13);
 
-  // Left Column - Student
-  doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+  doc.setTextColor(...slate);
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
+  doc.setFontSize(9);
+  doc.text(`Élève : ${studentName}`, 20, y + 23, { maxWidth: 76 });
+  doc.text(`Matricule : ${paiement.matriculeEleve || eleve?.matricule || 'Non renseigné'}`, 20, y + 33);
+  doc.text(`Classe : ${paiement.classe || eleve?.classe || 'Non renseignée'}`, 20, y + 43);
+  doc.text(`Tuteur : ${eleve?.nomTuteur || 'Non renseigné'}`, 20, y + 53, { maxWidth: 76 });
 
-  doc.text(`Élève: ${paiement.nomEleveComplete}`, 20, y + 22);
-  doc.text(`Matricule: ${paiement.matriculeEleve || (eleve?.matricule || 'N/A')}`, 20, y + 30);
-  doc.text(`Classe: ${paiement.classe}`, 20, y + 38);
-  doc.text(`Tuteur/Contact: ${eleve?.nomTuteur || 'Tuteur Légal'} (${eleve?.telTuteur || 'Non renseigné'})`, 20, y + 46);
+  doc.text(`Tranche : ${paiement.libelleTranche}`, 111, y + 23, { maxWidth: 75 });
+  doc.text(`Moyen : ${paiement.modePaiement}`, 111, y + 33);
+  doc.text(`Référence : ${paiement.referenceTransaction || 'Non renseignée'}`, 111, y + 43, { maxWidth: 75 });
+  doc.text(`Enregistré par : ${caissierNom}`, 111, y + 53, { maxWidth: 75 });
 
-  // Right Column - Payment Details
-  doc.text(`Motif / Tranche: ${paiement.libelleTranche}`, 110, y + 22);
-  doc.text(`Mode de paiement: ${paiement.modePaiement}`, 110, y + 30);
-  doc.text(`Réf. Transaction: ${paiement.referenceTransaction || 'N/A'}`, 110, y + 38);
-  doc.text(`Caissier / Agent: ${caissierNom}`, 110, y + 46);
-
-  y += 64;
-
-  // Financial Summary Table Header
-  doc.setFillColor(primaryBlue[0], primaryBlue[1], primaryBlue[2]);
+  y += 69;
+  doc.setFillColor(...primary);
   doc.rect(14, y, 182, 10, 'F');
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
-  doc.text("DÉSIGNATION SCOLARITÉ", 20, y + 7);
-  doc.text("MONTANT (FCFA)", 190, y + 7, { align: 'right' });
+  doc.setFontSize(9);
+  doc.text('DÉSIGNATION', 20, y + 7);
+  doc.text('MONTANT (FCFA)', 190, y + 7, { align: 'right' });
 
   y += 10;
-
-  // Table Rows
-  const totalScolarite = eleve?.montantTotalScolarite || (paiement.montant + (eleve?.soldeRestant || 0));
-  const versementActuel = paiement.montant;
-  const cumulApresPaiement = eleve ? (eleve.montantPaye) : versementActuel;
-  const soldeRestantDu = eleve ? eleve.soldeRestant : Math.max(0, totalScolarite - versementActuel);
-
-  const tableData = [
-    { label: "Total Frais de Scolarité Annuelle", value: `${totalScolarite.toLocaleString('fr-FR')} FCFA` },
-    { label: `Versement Actuel (${paiement.libelleTranche})`, value: `${versementActuel.toLocaleString('fr-FR')} FCFA`, isHighlight: true },
-    { label: "Cumul des Versements Encaissés à ce jour", value: `${cumulApresPaiement.toLocaleString('fr-FR')} FCFA` },
+  const totalScolarite = Number(eleve?.montantTotalScolarite || paiement.montant);
+  const cumulApresPaiement = Number(eleve?.montantPaye || paiement.montant);
+  const soldeRestant = Math.max(0, Number(eleve?.soldeRestant || totalScolarite - paiement.montant));
+  const rows = [
+    ['Total frais de scolarité', totalScolarite],
+    [`Versement actuel — ${paiement.libelleTranche}`, paiement.montant],
+    ['Cumul encaissé', cumulApresPaiement],
   ];
 
-  tableData.forEach((row, idx) => {
-    doc.setFillColor(idx % 2 === 0 ? 255 : 248, idx % 2 === 0 ? 255 : 250, idx % 2 === 0 ? 255 : 252);
-    doc.rect(14, y, 182, 9, 'F');
-
-    doc.setFont('helvetica', row.isHighlight ? 'bold' : 'normal');
-    doc.setTextColor(row.isHighlight ? accentOrange[0] : darkGray[0], row.isHighlight ? accentOrange[1] : darkGray[1], row.isHighlight ? accentOrange[2] : darkGray[2]);
-    doc.text(row.label, 20, y + 6);
-    doc.text(row.value, 190, y + 6, { align: 'right' });
-
-    doc.setDrawColor(241, 245, 249);
-    doc.line(14, y + 9, 196, y + 9);
-
-    y += 9;
+  rows.forEach(([label, amount], index) => {
+    doc.setFillColor(index % 2 === 0 ? 255 : 248, index % 2 === 0 ? 255 : 250, index % 2 === 0 ? 255 : 252);
+    doc.rect(14, y, 182, 10, 'F');
+    doc.setTextColor(...slate);
+    doc.setFont('helvetica', index === 1 ? 'bold' : 'normal');
+    doc.text(String(label), 20, y + 6.5, { maxWidth: 125 });
+    doc.text(`${Number(amount).toLocaleString('fr-FR')} FCFA`, 190, y + 6.5, { align: 'right' });
+    y += 10;
   });
 
-  // Balance Box (Reste Dû)
-  y += 4;
-  const isSoldeRegle = soldeRestantDu <= 0;
-  doc.setFillColor(isSoldeRegle ? 236 : 254, isSoldeRegle ? 253 : 242, isSoldeRegle ? 245 : 242); // emerald or rose tint
-  doc.setDrawColor(isSoldeRegle ? 167 : 254, isSoldeRegle ? 243 : 202, isSoldeRegle ? 208 : 202);
-  doc.roundedRect(14, y, 182, 16, 3, 3, 'FD');
-
+  y += 5;
+  const paidInFull = soldeRestant === 0;
+  doc.setFillColor(paidInFull ? 236 : 254, paidInFull ? 253 : 242, paidInFull ? 245 : 242);
+  doc.setDrawColor(paidInFull ? 167 : 254, paidInFull ? 243 : 202, paidInFull ? 208 : 202);
+  doc.roundedRect(14, y, 182, 17, 3, 3, 'FD');
+  doc.setTextColor(paidInFull ? 5 : 190, paidInFull ? 120 : 24, paidInFull ? 95 : 93);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.setTextColor(isSoldeRegle ? 5 : 225, isSoldeRegle ? 150 : 29, isSoldeRegle ? 105 : 72);
-  doc.text(isSoldeRegle ? "STATUT : SCOLARITÉ COMPLÈTEMENT RÉGLÉE (0 FCFA DÛ) ✅" : "RESTE À PAYER (SOLDE DÛ) :", 20, y + 10);
+  doc.setFontSize(10);
+  doc.text(paidInFull ? 'SCOLARITÉ ENTIÈREMENT RÉGLÉE' : 'SOLDE RESTANT À PAYER', 20, y + 10.5);
+  doc.text(`${soldeRestant.toLocaleString('fr-FR')} FCFA`, 190, y + 10.5, { align: 'right' });
 
-  if (!isSoldeRegle) {
-    doc.setFontSize(13);
-    doc.text(`${soldeRestantDu.toLocaleString('fr-FR')} FCFA`, 190, y + 10, { align: 'right' });
-  }
-
-  y += 24;
-
-  // Signatures & Stamp section
+  y += 31;
   doc.setDrawColor(203, 213, 225);
-  doc.setFillColor(255, 255, 255);
-
-  // Left box: Parent Signature
-  doc.roundedRect(14, y, 86, 34, 2, 2, 'D');
-  doc.setFontSize(8);
+  doc.roundedRect(14, y, 86, 30, 2, 2, 'D');
+  doc.roundedRect(110, y, 86, 30, 2, 2, 'D');
+  doc.setTextColor(...slate);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(100, 116, 139);
-  doc.text("SIGNATURE DU PARENT / TUTEUR", 18, y + 8);
-
-  // Right box: School Stamp & Signature
-  doc.roundedRect(110, y, 86, 34, 2, 2, 'D');
-  doc.text("CACHET ET SIGNATURE DE L'ÉCOLE", 114, y + 8);
-
-  // Stamp simulation
-  doc.setDrawColor(30, 58, 95);
-  doc.setTextColor(30, 58, 95);
   doc.setFontSize(8);
-  doc.setFont('helvetica', 'bold');
-  doc.text("GROUPE SCOLAIRE SAINTE-MARIE", 153, y + 20, { align: 'center' });
-  doc.setFontSize(7);
-  doc.text("DIRECTION DES FINANCES & CAISSE", 153, y + 25, { align: 'center' });
-  doc.text("PAIEMENT ENREGISTRÉ PAR ECOLEPAY", 153, y + 30, { align: 'center' });
+  doc.text('SIGNATURE DU PARENT / TUTEUR', 18, y + 8);
+  doc.text('CACHET ET SIGNATURE DE L’ÉCOLE', 114, y + 8);
+  doc.setFont('helvetica', 'normal');
+  doc.text(schoolName, 153, y + 19, { align: 'center', maxWidth: 70 });
+  doc.text(caissierNom, 153, y + 26, { align: 'center', maxWidth: 70 });
 
-  y += 42;
-
-  // Security Footer
+  y += 39;
   doc.setDrawColor(226, 232, 240);
   doc.line(14, y, 196, y);
+  doc.setTextColor(100, 116, 139);
   doc.setFontSize(7);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(148, 163, 184);
-  doc.text("Ce reçu électronique fait foi de preuve de règlement. Conservez-le précieusement.", 105, y + 5, { align: 'center' });
-  doc.text("Généré par EcolePay CI • Plateforme de gestion scolaire et recouvrement Mobile Money 🇨🇮", 105, y + 9, { align: 'center' });
+  doc.text('Ce reçu électronique atteste du règlement enregistré. Conservez-le précieusement.', 105, y + 5, { align: 'center' });
 
-  // Save the PDF file
-  const fileName = `Recu_${paiement.numeroRecu}_${paiement.nomEleveComplete.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
-  doc.save(fileName);
+  const safeStudentName = studentName.replace(/[^a-zA-Z0-9]/g, '_');
+  doc.save(`Recu_${paiement.numeroRecu}_${safeStudentName || 'eleve'}.pdf`);
 };
 
-// Function to generate WhatsApp link for unpaid student reminder
-export const getWhatsAppReminderUrl = (eleve: Eleve, schoolName: string = "Notre Établissement") => {
-  // Clean phone number (remove spaces, ensure country code +225)
+export const getWhatsAppReminderUrl = (eleve: Eleve, schoolName = 'Notre Établissement') => {
   let cleanPhone = eleve.telTuteur.replace(/\s+/g, '').replace(/-/g, '');
-  if (cleanPhone.startsWith('0')) {
-    cleanPhone = `225${cleanPhone}`;
-  } else if (cleanPhone.startsWith('+225')) {
-    cleanPhone = cleanPhone.replace('+225', '225');
-  } else if (!cleanPhone.startsWith('225')) {
-    cleanPhone = `225${cleanPhone}`;
-  }
+  if (cleanPhone.startsWith('0')) cleanPhone = `225${cleanPhone}`;
+  else if (cleanPhone.startsWith('+225')) cleanPhone = cleanPhone.replace('+225', '225');
+  else if (!cleanPhone.startsWith('225')) cleanPhone = `225${cleanPhone}`;
 
-  const message = `Bonjour ${eleve.nomTuteur || 'Cher Parent'}, la scolarité de ${eleve.nom} ${eleve.prenoms} (Classe: ${eleve.classe}) de ${eleve.soldeRestant.toLocaleString('fr-FR')} FCFA est due pour le compte de ${schoolName}. Merci de contacter le secrétariat pour le règlement.`;
-
+  const message = `Bonjour ${eleve.nomTuteur || 'Cher Parent'}, la scolarité de ${eleve.nom} ${eleve.prenoms} (Classe : ${eleve.classe}) de ${eleve.soldeRestant.toLocaleString('fr-FR')} FCFA est due pour le compte de ${schoolName}. Merci de contacter le secrétariat pour le règlement.`;
   return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
 };

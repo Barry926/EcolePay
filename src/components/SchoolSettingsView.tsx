@@ -27,8 +27,12 @@ import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { SchoolSettings, TrancheConfig, ComptePersonnel } from '../types';
 
-export const SchoolSettingsView: React.FC = () => {
-  const { schoolProfile, isDemoMode } = useAuth();
+interface SchoolSettingsViewProps {
+  onOpenSubscription?: () => void;
+}
+
+export const SchoolSettingsView: React.FC<SchoolSettingsViewProps> = ({ onOpenSubscription }) => {
+  const { schoolProfile } = useAuth();
   const schoolId = schoolProfile?.id || 'EP-ABJ-101';
 
   // 1. Informations de l'école
@@ -103,10 +107,14 @@ export const SchoolSettingsView: React.FC = () => {
   // Feedbacks
   const [savingStatus, setSavingStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
   const [activeSection, setActiveSection] = useState<'info' | 'tranches' | 'classes' | 'utilisateurs'>('info');
+  const [licenseKey, setLicenseKey] = useState('');
+  const [licenseStatus, setLicenseStatus] = useState<{ status: 'active' | 'expired' | 'invalid'; expiresAt?: string | null; keyMasked?: string } | null>(schoolProfile?.licence || null);
+  const [isActivatingLicense, setIsActivatingLicense] = useState(false);
+  const [licenseError, setLicenseError] = useState<string | null>(null);
 
   // Charger la configuration depuis Firestore
   useEffect(() => {
-    if (isDemoMode || !db) return;
+    if (!db) return;
 
     const loadSettings = async () => {
       try {
@@ -130,7 +138,7 @@ export const SchoolSettingsView: React.FC = () => {
     };
 
     loadSettings();
-  }, [schoolId, isDemoMode]);
+  }, [schoolId]);
 
   // Sauvegarder dans Firestore (schools/{schoolId}/settings/config)
   const handleSaveAllSettings = async () => {
@@ -148,7 +156,7 @@ export const SchoolSettingsView: React.FC = () => {
       personnel: personnelList
     };
 
-    if (!isDemoMode && db) {
+    if (db) {
       try {
         // Sauvegarde principale dans schools/{schoolId}/settings/config
         await setDoc(doc(db, 'schools', schoolId, 'settings', 'config'), payload);
@@ -167,11 +175,6 @@ export const SchoolSettingsView: React.FC = () => {
         console.error("Erreur sauvegarde Firestore:", err);
         setSavingStatus('error');
       }
-    } else {
-      // Mode démo simulation
-      setTimeout(() => {
-        setSavingStatus('success');
-      }, 500);
     }
 
     setTimeout(() => {
@@ -188,6 +191,45 @@ export const SchoolSettingsView: React.FC = () => {
         setLogoUrl(reader.result as string);
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleActivateLicense = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const normalizedKey = licenseKey.trim();
+    if (!normalizedKey) {
+      setLicenseError('Saisissez votre clé de licence avant de l’activer.');
+      return;
+    }
+
+    setIsActivatingLicense(true);
+    setLicenseError(null);
+    try {
+      const response = await fetch('/api/validate-license', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ licenseKey: normalizedKey }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.valid) {
+        setLicenseError(result.error || 'Licence expirée ou invalide. Veuillez renouveler votre abonnement.');
+        return;
+      }
+
+      const licence = {
+        keyMasked: `••••${normalizedKey.slice(-4)}`,
+        status: 'active' as const,
+        expiresAt: result.license?.expiresAt || null,
+        validatedAt: new Date().toISOString(),
+      };
+      await setDoc(doc(db, 'etablissements', schoolId), { licence }, { merge: true });
+      setLicenseStatus(licence);
+      setLicenseKey('');
+    } catch (error) {
+      console.error('Activation de licence impossible.', error);
+      setLicenseError('Impossible d’activer la licence. Vérifiez votre connexion internet et réessayez.');
+    } finally {
+      setIsActivatingLicense(false);
     }
   };
 
@@ -493,6 +535,27 @@ export const SchoolSettingsView: React.FC = () => {
                 </div>
               </div>
             </div>
+
+            <section className="rounded-2xl border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50/60 dark:bg-emerald-500/5 p-5">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                <div>
+                  <h4 className="font-black text-sm text-slate-900 dark:text-slate-50 flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-[#16A34A]" /> Abonnement EcolePay CI</h4>
+                  {licenseStatus?.status === 'active' ? (
+                    <p className="mt-1.5 text-xs text-emerald-800 dark:text-emerald-300">Licence {licenseStatus.keyMasked || ''} active{licenseStatus.expiresAt ? ` jusqu'au ${new Date(licenseStatus.expiresAt).toLocaleDateString('fr-FR')}` : ''}.</p>
+                  ) : (
+                    <p className="mt-1.5 text-xs text-slate-600 dark:text-slate-300">Activez la clé reçue par email après votre paiement pour bénéficier de l’accès complet.</p>
+                  )}
+                </div>
+                {onOpenSubscription && <button type="button" onClick={onOpenSubscription} className="shrink-0 px-3.5 py-2 rounded-xl bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-black">{licenseStatus?.status === 'active' ? 'Renouveler' : 'Voir les abonnements'}</button>}
+              </div>
+
+              <form onSubmit={handleActivateLicense} className="mt-4 flex flex-col sm:flex-row gap-2">
+                <label className="sr-only" htmlFor="license-key">Clé de licence</label>
+                <input id="license-key" value={licenseKey} onChange={(e) => setLicenseKey(e.target.value)} placeholder="Entrez votre clé de licence" className="flex-1 px-3.5 py-2.5 rounded-xl bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-slate-700 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-[#16A34A]" />
+                <button type="submit" disabled={isActivatingLicense} className="px-4 py-2.5 rounded-xl bg-[#0F172A] hover:bg-[#0B1120] text-white text-xs font-black disabled:opacity-50">{isActivatingLicense ? 'Validation…' : 'Activer'}</button>
+              </form>
+              {licenseError && <p role="alert" className="mt-3 text-xs font-bold text-rose-700 dark:text-rose-300">{licenseError}</p>}
+            </section>
 
           </div>
         </div>
