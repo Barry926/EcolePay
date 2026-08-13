@@ -9,7 +9,7 @@ interface RegisterProps {
 }
 
 export const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onBack }) => {
-  const { registerWithEmail, currentUser } = useAuth();
+  const { registerWithEmail, registerWithGoogle, currentUser } = useAuth();
 
   const [nomEcole, setNomEcole] = useState('');
   const [email, setEmail] = useState(currentUser?.email || '');
@@ -17,6 +17,22 @@ export const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onBack }) =
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const handleGoogleRegister = async () => {
+    setError(null);
+    if (!nomEcole.trim()) {
+      setError('Saisissez le nom de votre établissement avant de continuer avec Google.');
+      return;
+    }
+    try {
+      setLoading(true);
+      await registerWithGoogle(nomEcole);
+    } catch (err: any) {
+      setError(err?.message || 'Connexion Google impossible. Réessayez.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -220,6 +236,20 @@ export const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onBack }) =
               )}
             </button>
           </form>
+
+          <div className="relative py-1">
+            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200 dark:border-slate-700" /></div>
+            <div className="relative flex justify-center"><span className="bg-white dark:bg-[#1E293B] px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400">ou</span></div>
+          </div>
+          <button
+            type="button"
+            onClick={handleGoogleRegister}
+            disabled={loading}
+            className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/40 py-3 text-sm font-bold text-slate-700 dark:text-slate-100 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-60 flex items-center justify-center gap-2"
+          >
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-sm font-black text-[#4285F4] shadow-sm">G</span>
+            Continuer avec Google
+          </button>
 
           {/* Lien Se connecter */}
           <div className="text-center pt-2 text-xs text-slate-600 dark:text-slate-300">

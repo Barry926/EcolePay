@@ -151,7 +151,7 @@ export const generatePaymentReceiptPDF = async (
 };
 
 export const getWhatsAppReminderUrl = (eleve: Eleve, schoolName = 'Notre Établissement') => {
-  let cleanPhone = eleve.telTuteur.replace(/\s+/g, '').replace(/-/g, '');
+  let cleanPhone = (eleve.telWhatsAppTuteur || eleve.telTuteur || '').replace(/\s+/g, '').replace(/-/g, '');
   if (cleanPhone.startsWith('0')) cleanPhone = `225${cleanPhone}`;
   else if (cleanPhone.startsWith('+225')) cleanPhone = cleanPhone.replace('+225', '225');
   else if (!cleanPhone.startsWith('225')) cleanPhone = `225${cleanPhone}`;

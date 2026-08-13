@@ -1,6 +1,6 @@
 // Types principaux pour le SaaS EcolePay (Côte d'Ivoire)
 
-export type ModePaiement = 'Wave' | 'Orange Money' | 'MTN MoMo' | 'Moov Money' | 'Espèces' | 'Chèque' | 'Virement';
+export type ModePaiement = 'Wave' | 'Orange Money' | 'MTN MoMo' | 'Moov Money' | 'Espèces' | 'Chèque' | 'Virement' | 'Autre';
 export type StatutPaiement = 'Validé' | 'En attente' | 'Rejeté' | 'Remboursé';
 export type RoleUtilisateur = 'admin_fondateur' | 'comptable' | 'secretaire' | 'parent';
 
@@ -34,6 +34,7 @@ export interface Eleve {
   genre: 'M' | 'F';
   nomTuteur: string;
   telTuteur: string;
+  telWhatsAppTuteur?: string;
   emailTuteur?: string;
   montantTotalScolarite: number;
   montantPaye: number;

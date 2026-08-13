@@ -19,6 +19,7 @@ interface AuthContextType {
   loading: boolean;
   loginWithEmail: (email: string, pass: string) => Promise<void>;
   registerWithEmail: (email: string, pass: string, nomEcole: string) => Promise<void>;
+  registerWithGoogle: (nomEcole: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -202,6 +203,59 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const registerWithGoogle = async (nomEcole: string) => {
+    if (!nomEcole.trim()) {
+      throw new Error('Veuillez saisir le nom de votre établissement avant de continuer avec Google.');
+    }
+
+    setLoading(true);
+    try {
+      const result = await withTimeout(signInWithPopup(auth, googleProvider));
+      const user = result.user;
+      const existingDoc = await getDoc(doc(db, 'utilisateurs', user.uid));
+      if (existingDoc.exists()) {
+        throw new Error('Ce compte est déjà actif. Veuillez vous connecter normalement.');
+      }
+
+      const ecoleId = `EP-${crypto.randomUUID()}`;
+      const email = user.email || '';
+      const newSchool: Etablissement = {
+        id: ecoleId,
+        nom: nomEcole.trim(),
+        codeEcole: `EP-CI-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
+        adresse: '',
+        ville: 'Abidjan',
+        telephone: '',
+        email,
+        devise: 'FCFA',
+      };
+      const parts = (user.displayName || 'Administrateur').trim().split(/\s+/);
+      const newUser: Utilisateur = {
+        uid: user.uid,
+        email,
+        nom: parts[0] || 'Administrateur',
+        prenom: parts.slice(1).join(' '),
+        role: 'admin_fondateur',
+        etablissementId: ecoleId,
+        photoURL: user.photoURL || undefined,
+      };
+
+      await Promise.all([
+        setDoc(doc(db, 'etablissements', ecoleId), newSchool),
+        setDoc(doc(db, 'utilisateurs', user.uid), newUser),
+      ]);
+      setUserProfile(newUser);
+      setSchoolProfile(newSchool);
+    } catch (error: any) {
+      if (isConnectionError(error) || error?.code === 'auth/unauthorized-domain') {
+        throw new Error(AUTH_CONNECTION_ERROR);
+      }
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const loginWithGoogle = async () => {
     setLoading(true);
     try {
@@ -239,8 +293,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         schoolProfile,
         loading,
         loginWithEmail,
-        registerWithEmail,
-        loginWithGoogle,
+    registerWithEmail,
+    registerWithGoogle,
+    loginWithGoogle,
         logout,
       }}
     >

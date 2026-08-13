@@ -78,6 +78,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenSubscription }) => {
   // Modals state
   const [showAddPaymentModal, setShowAddPaymentModal] = useState(false);
   const [showAddStudentModal, setShowAddStudentModal] = useState(false);
+  const [showEditStudentModal, setShowEditStudentModal] = useState(false);
+  const [studentBeingEdited, setStudentBeingEdited] = useState<Eleve | null>(null);
   const [selectedReceipt, setSelectedReceipt] = useState<Paiement | null>(null);
   const [selectedStudentDetails, setSelectedStudentDetails] = useState<Eleve | null>(null);
   const [showArchivedStudents, setShowArchivedStudents] = useState(false);
@@ -97,12 +99,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenSubscription }) => {
   const [pCaissier, setPCaissier] = useState('');
   const [targetStudentId, setTargetStudentId] = useState<string | null>(null);
 
-  // Formulaire Nouvel Élève (Inscrire un élève)
-  const [eNomComplet, setENomComplet] = useState('');
+  // Formulaire élève : les montants déterminent automatiquement le solde et le statut.
+  const [eNom, setENom] = useState('');
+  const [ePrenoms, setEPrenoms] = useState('');
+  const [eMatricule, setEMatricule] = useState('');
   const [eClasse, setEClasse] = useState('6ème A');
   const [eTelTuteur, setETelTuteur] = useState('');
+  const [eWhatsAppTuteur, setEWhatsAppTuteur] = useState('');
   const [eNomTuteur, setENomTuteur] = useState('');
   const [eMontantTotal, setEMontantTotal] = useState('250000');
+  const [eMontantDejaPaye, setEMontantDejaPaye] = useState('0');
 
   // Nom du caissier / directeur connecté
   const directeurNomComplete = userProfile 
@@ -354,6 +360,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenSubscription }) => {
           datePaiement: formatPaymentDate(paidAt || paiement.datePaiement),
         };
       });
+      liste.sort((first, second) => {
+        const firstDate = toDate(first.paidAt || first.createdAt || first.datePaiement)?.getTime() || 0;
+        const secondDate = toDate(second.paidAt || second.createdAt || second.datePaiement)?.getTime() || 0;
+        return secondDate - firstDate;
+      });
       setPaiements(liste);
     }, () => {
       notify('Impossible de synchroniser les paiements. Vérifiez votre connexion internet.', 'error');
@@ -375,9 +386,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenSubscription }) => {
   const dateFormattedDisplay = todayFormatted.charAt(0).toUpperCase() + todayFormatted.slice(1);
 
   // Calculs financiers et statistiques globaux
-  const totalFraisAttendus = eleves.reduce((acc, el) => acc + (el.montantTotalScolarite || 0), 0);
-  const totalEncaisse = paiements.reduce((acc, p) => acc + (p.montant || 0), 0);
-  const totalImpayes = Math.max(0, totalFraisAttendus - totalEncaisse);
+  const totalFraisAttendus = eleves.reduce((acc, el) => acc + Number(el.montantTotalScolarite || 0), 0);
+  const totalEncaisse = eleves.reduce((acc, el) => acc + Number(el.montantPaye || 0), 0);
+  const totalImpayes = eleves.reduce((acc, el) => acc + Math.max(0, Number(el.soldeRestant || 0)), 0);
   const nombreElevesTotal = eleves.length;
 
   // Calcul du statut de paiement pour un élève
@@ -407,62 +418,160 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenSubscription }) => {
   // 5 Derniers Paiements
   const derniersCinqPaiements = paiements.slice(0, 5);
 
-  // Données pour le Graphique Encaissé vs Impayé ce mois
+  // Données réelles du graphique, dérivées des dossiers élèves de l’établissement.
   const chartDataParCycle = [
-    { name: 'Maternelle', Encaissé: 4500000, Impayé: 1200000 },
-    { name: 'Primaire', Encaissé: 12800000, Impayé: 3400000 },
-    { name: 'Collège (1er C.)', Encaissé: 18200000, Impayé: 7100000 },
-    { name: 'Lycée (2nd C.)', Encaissé: 10750000, Impayé: 6800000 }
-  ];
+    { name: 'Maternelle', cycle: 'Maternelle' },
+    { name: 'Primaire', cycle: 'Primaire' },
+    { name: 'Collège', cycle: 'Secondaire Premier Cycle' },
+    { name: 'Lycée', cycle: 'Secondaire Second Cycle' },
+  ].map((item) => ({
+    name: item.name,
+    Encaissé: eleves.filter((student) => student.cycle === item.cycle).reduce((sum, student) => sum + Number(student.montantPaye || 0), 0),
+    Impayé: eleves.filter((student) => student.cycle === item.cycle).reduce((sum, student) => sum + Math.max(0, Number(student.soldeRestant || 0)), 0),
+  }));
 
-  // Inscription d'un élève : une erreur de persistance reste visible et n'ajoute jamais de donnée locale fantôme.
+  const paymentModeSummary = ['Wave', 'Orange Money', 'MTN MoMo', 'Espèces'] as ModePaiement[];
+  const totalRecordedPayments = paiements.reduce((sum, payment) => sum + Number(payment.montant || 0), 0);
+
+  const resetStudentForm = () => {
+    setENom('');
+    setEPrenoms('');
+    setEMatricule('');
+    setEClasse('6ème A');
+    setETelTuteur('');
+    setEWhatsAppTuteur('');
+    setENomTuteur('');
+    setEMontantTotal('250000');
+    setEMontantDejaPaye('0');
+  };
+
+  // Inscription d’un élève : l’état financier est calculé au serveur et le montant initial est historisé.
   const handleCreateStudent = async (e: React.FormEvent) => {
     e.preventDefault();
     const etablissementId = schoolProfile?.id || userProfile?.etablissementId;
     const mTotal = Number(eMontantTotal);
+    const mDejaPaye = Number(eMontantDejaPaye || 0);
 
     if (!etablissementId || !currentUser) {
       notify('Votre session établissement est incomplète. Reconnectez-vous puis réessayez.', 'error');
       return;
     }
-    if (!eNomComplet.trim() || !Number.isFinite(mTotal) || mTotal <= 0) {
-      notify('Saisissez le nom complet et un montant de scolarité valide.', 'error');
+    if (!eNom.trim() || !ePrenoms.trim() || !eMatricule.trim() || !eClasse || !eTelTuteur.trim() || !Number.isFinite(mTotal) || mTotal <= 0 || !Number.isFinite(mDejaPaye) || mDejaPaye < 0) {
+      notify('Complétez le nom, prénom, matricule, classe, téléphone et les montants valides.', 'error');
+      return;
+    }
+    if (mDejaPaye > mTotal) {
+      notify('Le montant déjà payé ne peut pas dépasser le total des frais scolaires.', 'error');
+      return;
+    }
+    if (eleves.some((student) => student.matricule.trim().toLowerCase() === eMatricule.trim().toLowerCase())) {
+      notify('Ce matricule existe déjà dans votre établissement.', 'error');
       return;
     }
 
-    const [nomPart, ...prenoms] = eNomComplet.trim().split(/\s+/);
-    const newStudentData = {
-      matricule: 'EL-' + crypto.randomUUID().slice(0, 8).toUpperCase(),
-      nom: nomPart,
-      prenoms: prenoms.join(' '),
-      classe: eClasse,
-      cycle: getCycleFromClasse(eClasse),
-      genre: 'M' as const,
-      nomTuteur: eNomTuteur.trim() || 'Tuteur légal',
-      telTuteur: eTelTuteur.trim(),
-      montantTotalScolarite: mTotal,
-      montantPaye: 0,
-      soldeRestant: mTotal,
-      estEnRegle: false,
-      archived: false,
-      createdAt: serverTimestamp(),
-    };
-
     setIsCreatingStudent(true);
     try {
-      await addDoc(collection(db, 'etablissements', etablissementId, 'eleves'), newStudentData);
-      setENomComplet('');
-      setEClasse('6ème A');
-      setETelTuteur('');
-      setENomTuteur('');
-      setEMontantTotal('250000');
+      await runTransaction(db, async (transaction) => {
+        const studentRef = doc(collection(db, 'etablissements', etablissementId, 'eleves'));
+        const counterRef = doc(db, 'etablissements', etablissementId, 'config', 'lastReceiptNumber');
+        const paymentRef = doc(collection(db, 'etablissements', etablissementId, 'paiements'));
+        const counterSnap = await transaction.get(counterRef);
+        const now = Timestamp.now();
+        const remaining = Math.max(0, mTotal - mDejaPaye);
+        const newStudentData = {
+          matricule: eMatricule.trim(),
+          nom: eNom.trim(),
+          prenoms: ePrenoms.trim(),
+          classe: eClasse,
+          cycle: getCycleFromClasse(eClasse),
+          genre: 'M' as const,
+          nomTuteur: eNomTuteur.trim() || 'Tuteur légal',
+          telTuteur: eTelTuteur.trim(),
+          telWhatsAppTuteur: (eWhatsAppTuteur.trim() || eTelTuteur.trim()),
+          montantTotalScolarite: mTotal,
+          montantPaye: mDejaPaye,
+          soldeRestant: remaining,
+          estEnRegle: remaining === 0,
+          archived: false,
+          createdAt: now,
+          updatedAt: now,
+        };
+        transaction.set(studentRef, newStudentData);
+
+        if (mDejaPaye > 0) {
+          const year = now.toDate().getFullYear().toString();
+          const counters = (counterSnap.data()?.counters || {}) as Record<string, number>;
+          const nextNumber = Number(counters[year] || 0) + 1;
+          const numeroRecu = `REC-${year}-${String(nextNumber).padStart(4, '0')}`;
+          transaction.set(paymentRef, {
+            eleveId: studentRef.id,
+            matriculeEleve: eMatricule.trim(),
+            nomEleveComplete: `${eNom.trim()} ${ePrenoms.trim()}`,
+            classe: eClasse,
+            montant: mDejaPaye,
+            modePaiement: 'Autre' as ModePaiement,
+            referenceTransaction: `INITIAL-${numeroRecu}`,
+            numeroRecu,
+            datePaiement: formatPaymentDate(now.toDate()),
+            paidAt: now,
+            createdAt: now,
+            statut: 'Validé' as const,
+            libelleTranche: 'Montant déjà payé à l’inscription',
+            effectueParUid: currentUser.uid,
+            caissierNom: directeurNomComplete || 'Direction',
+          });
+          transaction.set(counterRef, { counters: { [year]: nextNumber }, updatedAt: now }, { merge: true });
+        }
+      });
+      resetStudentForm();
       setShowAddStudentModal(false);
-      notify('Élève inscrit avec succès.', 'success');
+      notify('Élève ajouté. Le solde et le statut ont été calculés automatiquement.', 'success');
     } catch (error) {
       console.error('Inscription élève impossible.', error);
-      notify("Impossible d'inscrire l'élève. Vérifiez votre connexion internet et réessayez.", 'error');
+      notify("Impossible d'ajouter l'élève. Vérifiez votre connexion internet et réessayez.", 'error');
     } finally {
       setIsCreatingStudent(false);
+    }
+  };
+
+  const handleOpenEditStudent = (student: Eleve) => {
+    setStudentBeingEdited(student);
+    setENom(student.nom || '');
+    setEPrenoms(student.prenoms || '');
+    setEMatricule(student.matricule || '');
+    setEClasse(student.classe || '6ème A');
+    setETelTuteur(student.telTuteur || '');
+    setEWhatsAppTuteur(student.telWhatsAppTuteur || student.telTuteur || '');
+    setENomTuteur(student.nomTuteur || '');
+    setEMontantTotal(String(student.montantTotalScolarite || 0));
+    setEMontantDejaPaye(String(student.montantPaye || 0));
+    setShowEditStudentModal(true);
+  };
+
+  const handleEditStudent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const etablissementId = schoolProfile?.id || userProfile?.etablissementId;
+    const total = Number(eMontantTotal);
+    if (!studentBeingEdited || !etablissementId || !Number.isFinite(total) || total < studentBeingEdited.montantPaye || !eNom.trim() || !ePrenoms.trim() || !eMatricule.trim() || !eTelTuteur.trim()) {
+      notify('Le total doit être supérieur ou égal au montant déjà enregistré et tous les champs requis doivent être complétés.', 'error');
+      return;
+    }
+    try {
+      const remaining = Math.max(0, total - studentBeingEdited.montantPaye);
+      await updateDoc(doc(db, 'etablissements', etablissementId, 'eleves', studentBeingEdited.id), {
+        matricule: eMatricule.trim(), nom: eNom.trim(), prenoms: ePrenoms.trim(), classe: eClasse,
+        cycle: getCycleFromClasse(eClasse), nomTuteur: eNomTuteur.trim() || 'Tuteur légal',
+        telTuteur: eTelTuteur.trim(), telWhatsAppTuteur: eWhatsAppTuteur.trim() || eTelTuteur.trim(),
+        montantTotalScolarite: total, soldeRestant: remaining, estEnRegle: remaining === 0, updatedAt: serverTimestamp(),
+      });
+      setSelectedStudentDetails(null);
+      setShowEditStudentModal(false);
+      setStudentBeingEdited(null);
+      resetStudentForm();
+      notify('Fiche élève mise à jour.', 'success');
+    } catch (error) {
+      console.error('Mise à jour élève impossible.', error);
+      notify("Impossible de modifier l'élève. Réessayez.", 'error');
     }
   };
 
@@ -546,11 +655,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenSubscription }) => {
       notify('Le montant ne peut pas dépasser le solde dû de ' + selectedStudent.soldeRestant.toLocaleString('fr-FR') + ' FCFA.', 'error');
       return;
     }
-    if (pMode !== 'Espèces' && !pRef.trim()) {
-      notify('La référence de transaction est obligatoire pour un paiement Mobile Money.', 'error');
-      return;
-    }
-
     setIsCreatingPayment(true);
     try {
       const result = await runTransaction(db, async (transaction) => {
@@ -678,6 +782,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenSubscription }) => {
       || isWithinCurrentPeriod(p.paidAt || p.createdAt || p.datePaiement, selectedDateFilter);
     return matchesSearch && matchesMode && matchesClasse && matchesDate;
   });
+
+  const draftTotal = Math.max(0, Number(eMontantTotal) || 0);
+  const draftPaid = showEditStudentModal ? Number(studentBeingEdited?.montantPaye || 0) : Math.max(0, Number(eMontantDejaPaye) || 0);
+  const draftRemaining = Math.max(0, draftTotal - draftPaid);
+  const draftStatus = draftPaid <= 0 ? 'Impayé' : draftRemaining === 0 ? 'Payé' : 'Partiellement payé';
 
   return (
     <div className="min-h-screen bg-[#F9FAFB] dark:bg-[#0F172A] font-sans text-slate-800 dark:text-slate-100 flex flex-col lg:flex-row antialiased">
@@ -1248,6 +1357,24 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenSubscription }) => {
                   </div>
                 </div>
 
+                <div className="flex flex-wrap gap-2" aria-label="Filtres rapides de paiement">
+                  {([
+                    { value: 'Tous', label: 'Tous', style: 'bg-slate-100 text-slate-700 border-slate-200' },
+                    { value: 'Payé', label: `Payés (${countPaye})`, style: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+                    { value: 'Partiel', label: `Partiellement payés (${countPartiel})`, style: 'bg-amber-50 text-amber-700 border-amber-200' },
+                    { value: 'Impayé', label: `Impayés (${countImpaye})`, style: 'bg-rose-50 text-rose-700 border-rose-200' },
+                  ] as const).map((filter) => (
+                    <button
+                      key={filter.value}
+                      type="button"
+                      onClick={() => setSelectedStatusFilter(filter.value)}
+                      className={`rounded-full border px-3 py-1.5 text-xs font-bold transition-all ${filter.style} ${selectedStatusFilter === filter.value ? 'ring-2 ring-[#16A34A]/25' : 'opacity-80 hover:opacity-100'}`}
+                    >
+                      {filter.label}
+                    </button>
+                  ))}
+                </div>
+
                 {/* Tableau complet des élèves */}
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">
@@ -1347,9 +1474,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenSubscription }) => {
                                       className="px-2.5 py-1.5 bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold rounded-xl shadow-xs inline-flex items-center space-x-1 cursor-pointer transition-all"
                                     >
                                       <CreditCard className="w-3.5 h-3.5" />
-                                      <span>Régler</span>
+                                      <span>Enregistrer</span>
                                     </button>
                                   )}
+
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenEditStudent(el)}
+                                    className="px-2.5 py-1.5 bg-sky-50 dark:bg-sky-500/10 hover:bg-sky-100 dark:hover:bg-sky-500/20 text-sky-700 dark:text-sky-300 text-xs font-bold rounded-xl border border-sky-200 dark:border-sky-500/30 inline-flex items-center space-x-1 cursor-pointer transition-all"
+                                  >
+                                    <FileText className="w-3.5 h-3.5" />
+                                    <span>Modifier</span>
+                                  </button>
 
                                   {/* Voir Fiche Élève */}
                                   <button
@@ -1589,106 +1725,72 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenSubscription }) => {
 
       </main>
 
-      {/* MODAL : 2. INSCRIRE UN ÉLÈVE */}
-      {showAddStudentModal && (
-        <div className="fixed inset-0 bg-slate-900 dark:bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white dark:bg-[#1E293B] rounded-2xl animate-modalIn max-w-md w-full p-6 shadow-2xl border border-slate-100 dark:border-slate-800 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <h3 className="text-base font-bold text-slate-900 dark:text-slate-50 flex items-center">
-                <UserCheck className="w-5 h-5 mr-1.5 text-[#0F172A]" />
-                Inscrire un Nouvel Élève
-              </h3>
-              <button 
-                onClick={() => setShowAddStudentModal(false)}
-                className="text-slate-400 dark:text-slate-500 hover:text-slate-600 font-bold text-sm cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
+      {/* MODALE : AJOUT / MODIFICATION D’UN ÉLÈVE */}
+      {(showAddStudentModal || showEditStudentModal) && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/60 p-0 sm:p-4 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full max-w-2xl max-h-[94vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#1E293B] p-5 sm:p-7 shadow-2xl animate-modalIn">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
+              <div>
+                <p className="text-xs font-black uppercase tracking-widest text-[#16A34A]">Dossier élève</p>
+                <h3 className="mt-1 text-xl font-black text-slate-900 dark:text-white">{showEditStudentModal ? 'Modifier l’élève' : 'Ajouter un élève'}</h3>
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Le reste à payer et le statut sont calculés automatiquement.</p>
+              </div>
+              <button type="button" onClick={() => { setShowAddStudentModal(false); setShowEditStudentModal(false); setStudentBeingEdited(null); resetStudentForm(); }} className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" aria-label="Fermer"><X className="h-5 w-5" /></button>
             </div>
 
-            <form onSubmit={handleCreateStudent} className="space-y-4">
-              
-              {/* Nom complet */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 uppercase mb-1">Nom Complet de l'Élève *</label>
-                <input
-                  type="text"
-                  value={eNomComplet}
-                  onChange={(e) => setENomComplet(e.target.value)}
-                  placeholder="Ex: Kouassi Marc-Antoine"
-                  required
-                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-[#16A34A]"
-                />
+            <form onSubmit={showEditStudentModal ? handleEditStudent : handleCreateStudent} className="mt-5 space-y-5">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-200">Nom de l’élève *
+                  <input value={eNom} onChange={(e) => setENom(e.target.value)} required placeholder="Kouassi" className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm font-semibold outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-700 dark:bg-slate-800/40" />
+                </label>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-200">Prénom(s) *
+                  <input value={ePrenoms} onChange={(e) => setEPrenoms(e.target.value)} required placeholder="Jean" className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm font-semibold outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-700 dark:bg-slate-800/40" />
+                </label>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-200">Matricule *
+                  <input value={eMatricule} onChange={(e) => setEMatricule(e.target.value)} required placeholder="2026001" className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm font-mono font-semibold outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-700 dark:bg-slate-800/40" />
+                </label>
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-200">Classe *
+                  <select value={eClasse} onChange={(e) => setEClasse(e.target.value)} className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm font-semibold outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-700 dark:bg-slate-800/40">
+                    {listClassesDisponibles.map((classe) => <option key={classe} value={classe}>{classe}</option>)}
+                  </select>
+                </label>
               </div>
 
-              {/* Classe */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 uppercase mb-1">Classe *</label>
-                <select
-                  value={eClasse}
-                  onChange={(e) => setEClasse(e.target.value)}
-                  required
-                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-800 dark:text-slate-100 focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-[#16A34A]"
-                >
-                  {listClassesDisponibles.map(c => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/30">
+                <p className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Parent ou tuteur</p>
+                <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-200">Nom du tuteur
+                    <input value={eNomTuteur} onChange={(e) => setENomTuteur(e.target.value)} placeholder="Kouassi Marie" className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-700 dark:bg-slate-900" />
+                  </label>
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-200">Téléphone *
+                    <input value={eTelTuteur} onChange={(e) => setETelTuteur(e.target.value)} required inputMode="tel" placeholder="07 00 00 00 00" className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-700 dark:bg-slate-900" />
+                  </label>
+                  <label className="text-xs font-bold text-[#168A48] sm:col-span-2">Numéro WhatsApp de relance *
+                    <input value={eWhatsAppTuteur} onChange={(e) => setEWhatsAppTuteur(e.target.value)} inputMode="tel" placeholder="07 00 00 00 00" className="mt-1.5 w-full rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-sm font-semibold outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-emerald-500/20 dark:border-emerald-500/30 dark:bg-emerald-500/10" />
+                  </label>
+                </div>
               </div>
 
-              {/* Téléphone parent */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 uppercase mb-1">Téléphone Parent / Tuteur *</label>
-                <input
-                  type="text"
-                  value={eTelTuteur}
-                  onChange={(e) => setETelTuteur(e.target.value)}
-                  placeholder="Ex: +225 07 08 09 10 11"
-                  required
-                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-mono focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-[#16A34A]"
-                />
+              <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4 dark:border-emerald-500/20 dark:bg-emerald-500/5">
+                <p className="text-xs font-black uppercase tracking-wider text-emerald-800 dark:text-emerald-300">Situation financière</p>
+                <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-200">Frais scolaires totaux (FCFA) *
+                    <input type="number" min="0" value={eMontantTotal} onChange={(e) => setEMontantTotal(e.target.value)} required className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-black outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-emerald-500/20 dark:border-slate-700 dark:bg-slate-900" />
+                  </label>
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-200">Montant déjà payé (FCFA)
+                    <input type="number" min="0" max={eMontantTotal || undefined} value={showEditStudentModal ? String(studentBeingEdited?.montantPaye || 0) : eMontantDejaPaye} onChange={(e) => setEMontantDejaPaye(e.target.value)} disabled={showEditStudentModal} className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-black outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-70 dark:border-slate-700 dark:bg-slate-900" />
+                  </label>
+                </div>
+                <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs">
+                  <div className="rounded-xl bg-white p-3 dark:bg-slate-900"><span className="block text-slate-400">Payé</span><strong className="mt-1 block text-emerald-600">{draftPaid.toLocaleString('fr-FR')} FCFA</strong></div>
+                  <div className="rounded-xl bg-white p-3 dark:bg-slate-900"><span className="block text-slate-400">Reste</span><strong className="mt-1 block text-rose-600">{draftRemaining.toLocaleString('fr-FR')} FCFA</strong></div>
+                  <div className="rounded-xl bg-white p-3 dark:bg-slate-900"><span className="block text-slate-400">Statut</span><strong className={`mt-1 block ${draftStatus === 'Payé' ? 'text-emerald-600' : draftStatus === 'Impayé' ? 'text-rose-600' : 'text-amber-600'}`}>{draftStatus}</strong></div>
+                </div>
               </div>
 
-              {/* Montant total des frais */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 uppercase mb-1">Montant Total des Frais de Scolarité (FCFA) *</label>
-                <input
-                  type="number"
-                  value={eMontantTotal}
-                  onChange={(e) => setEMontantTotal(e.target.value)}
-                  placeholder="Ex: 250000"
-                  required
-                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-black focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-[#16A34A]"
-                />
-              </div>
-
-              {/* Nom du tuteur */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 uppercase mb-1">Nom du Parent / Tuteur (Optionnel)</label>
-                <input
-                  type="text"
-                  value={eNomTuteur}
-                  onChange={(e) => setENomTuteur(e.target.value)}
-                  placeholder="Ex: Kouassi Jean-Baptiste"
-                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium focus:bg-white dark:focus:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-[#16A34A]"
-                />
-              </div>
-
-              <div className="pt-2 flex justify-end space-x-2">
-                <button
-                  type="button"
-                  onClick={() => setShowAddStudentModal(false)}
-                  className="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  disabled={isCreatingStudent}
-                  className="px-5 py-2 bg-[#0F172A] hover:bg-[#0B1120] text-white rounded-xl text-xs font-bold shadow-md cursor-pointer transition-all disabled:opacity-50"
-                >
-                  {isCreatingStudent ? 'Inscription en cours…' : "Valider l'Inscription"}
-                </button>
+              <div className="flex flex-col-reverse gap-2 border-t border-slate-100 pt-4 sm:flex-row sm:justify-end dark:border-slate-800">
+                <button type="button" onClick={() => { setShowAddStudentModal(false); setShowEditStudentModal(false); setStudentBeingEdited(null); resetStudentForm(); }} className="rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">Annuler</button>
+                <button type="submit" disabled={isCreatingStudent || draftPaid > draftTotal} className="rounded-xl bg-[#16A34A] px-5 py-2.5 text-xs font-black text-white shadow-lg shadow-emerald-500/20 hover:bg-[#15803D] disabled:cursor-not-allowed disabled:opacity-60">{isCreatingStudent ? 'Enregistrement…' : showEditStudentModal ? 'Enregistrer les modifications' : 'Ajouter l’élève'}</button>
               </div>
             </form>
           </div>
@@ -1755,7 +1857,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenSubscription }) => {
                 </div>
                 <div className="flex items-center space-x-1 font-mono font-bold text-[#0F172A] mt-1">
                   <Phone className="w-3.5 h-3.5" />
-                  <span>{selectedStudentDetails.telTuteur}</span>
+                  <span>{selectedStudentDetails.telWhatsAppTuteur || selectedStudentDetails.telTuteur}</span>
                 </div>
               </div>
 
@@ -1841,13 +1943,23 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenSubscription }) => {
               <div className="flex items-center space-x-2">
                 <button
                   onClick={() => {
+                    handleOpenEditStudent(selectedStudentDetails);
+                    setSelectedStudentDetails(null);
+                  }}
+                  className="px-4 py-2 bg-sky-50 dark:bg-sky-500/10 hover:bg-sky-100 dark:hover:bg-sky-500/20 text-sky-700 dark:text-sky-300 text-xs font-bold rounded-xl border border-sky-200 dark:border-sky-500/30 flex items-center space-x-1.5 cursor-pointer"
+                >
+                  <FileText className="w-4 h-4" />
+                  <span>Modifier</span>
+                </button>
+                <button
+                  onClick={() => {
                     handleOpenPaymentForStudent(selectedStudentDetails);
                     setSelectedStudentDetails(null);
                   }}
                   className="px-4 py-2 bg-[#16A34A] hover:bg-[#15803D] text-white text-xs font-bold rounded-xl shadow-md flex items-center space-x-1.5 cursor-pointer"
                 >
                   <CreditCard className="w-4 h-4" />
-                  <span>Enregistrer un Règlement</span>
+                  <span>Enregistrer un paiement</span>
                 </button>
 
                 <button
@@ -1871,7 +1983,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenSubscription }) => {
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
               <h3 className="text-base font-bold text-slate-900 dark:text-slate-50 flex items-center">
                 <CreditCard className="w-5 h-5 mr-1.5 text-[#16A34A]" />
-                Enregistrer un Règlement de Scolarité
+                Enregistrer un paiement reçu
               </h3>
               <button 
                 onClick={() => {
@@ -1985,7 +2097,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenSubscription }) => {
               {/* 2. Montant à encaisser */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 uppercase mb-1">Montant à Encaisser (FCFA) *</label>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 uppercase mb-1">Montant reçu (FCFA) *</label>
                   <input
                     type="number"
                     value={pMontant}
@@ -2015,13 +2127,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenSubscription }) => {
 
               {/* 3. Mode de paiement */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 uppercase mb-1">3. Mode de Paiement (MoMo CI / Espèces) *</label>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 uppercase mb-1">Moyen de règlement reçu *</label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {[
                     { id: 'Wave', label: 'Wave CI 🟦' },
                     { id: 'Orange Money', label: 'Orange 🟧' },
                     { id: 'MTN MoMo', label: 'MTN 🟨' },
                     { id: 'Espèces', label: 'Espèces 🟩' },
+                    { id: 'Moov Money', label: 'Moov' },
+                    { id: 'Virement', label: 'Virement' },
+                    { id: 'Autre', label: 'Autre' },
                   ].map((modeItem) => (
                     <button
                       type="button"
@@ -2041,7 +2156,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onOpenSubscription }) => {
 
               {/* Référence transaction Mobile Money */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 uppercase mb-1">Réf. Transaction (Optionnel)</label>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 uppercase mb-1">Référence du règlement (facultatif pour espèces)</label>
                 <input
                   type="text"
                   value={pRef}

@@ -39,7 +39,7 @@ const NAV = [
 
 const FEATURES = [
   { icon: Users, title: 'Gestion des élèves', desc: "Répertoire complet par classe et cycle, du préscolaire à la Terminale. Suivi du solde de scolarité en temps réel." },
-  { icon: Smartphone, title: 'Paiements Mobile Money', desc: 'Encaissez via Wave, Orange Money, MTN MoMo, Moov Money ou espèces — chaque règlement est tracé et référencé.' },
+  { icon: Smartphone, title: 'Paiements enregistrés', desc: 'Enregistrez les règlements reçus en espèces, Wave, Orange Money, MTN MoMo, Moov Money, virement ou autre moyen.' },
   { icon: FileText, title: 'Reçus PDF officiels', desc: "Générez un reçu de scolarité professionnel en un clic, avec le cachet et les informations de l'établissement." },
   { icon: MessageSquare, title: 'Rappels WhatsApp', desc: 'Relancez les parents des élèves en impayé avec un message WhatsApp pré-rempli, directement depuis la fiche.' },
   { icon: LayoutDashboard, title: 'Tableau de bord', desc: "Visualisez l'encaissé, les impayés et le recouvrement par cycle avec des graphiques clairs et instantanés." },
@@ -176,7 +176,7 @@ export const Landing: React.FC<LandingProps> = ({ onLogin, onRegister }) => {
               La gestion des <span className="text-[#16A34A]">frais scolaires</span>, enfin simple.
             </h1>
             <p className="mt-6 text-base sm:text-lg text-slate-600 dark:text-slate-300 max-w-xl leading-relaxed">
-              EcolePay CI centralise vos élèves, encaisse via Wave, Orange Money & MTN, génère les reçus PDF et relance les impayés par WhatsApp. Tout, depuis un seul tableau de bord.
+              EcolePay CI centralise vos élèves, enregistre les règlements réellement reçus, calcule les soldes et facilite les relances WhatsApp. Aucun parent ne paie ses frais scolaires sur la plateforme.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row gap-3">
               <button onClick={onRegister} data-testid="hero-register-btn" className="inline-flex items-center justify-center gap-2 px-6 py-3.5 text-sm font-bold text-white bg-[#16A34A] hover:bg-[#15803D] rounded-xl shadow-lg shadow-emerald-500/25 transition-all hover:-translate-y-0.5 cursor-pointer">
@@ -253,7 +253,7 @@ export const Landing: React.FC<LandingProps> = ({ onLogin, onRegister }) => {
       {/* ============ TRUST / PAYMENT METHODS ============ */}
       <section className="py-8 border-y border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <p className="text-center text-xs font-bold uppercase tracking-widest text-slate-400 mb-5">Compatible avec tous les moyens de paiement ivoiriens</p>
+          <p className="text-center text-xs font-bold uppercase tracking-widest text-slate-400 mb-5">Enregistrez tous les moyens de règlement utilisés par votre école</p>
           <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-4">
             {[
               { n: 'Wave', c: 'text-sky-500' },
@@ -322,10 +322,10 @@ export const Landing: React.FC<LandingProps> = ({ onLogin, onRegister }) => {
             <div className="pointer-events-none absolute -top-20 -right-16 w-80 h-80 rounded-full bg-[#16A34A]/25 blur-[110px]" />
             <div className="relative grid grid-cols-2 md:grid-cols-4 gap-8 p-10 sm:p-14 text-center">
               {[
-                { v: '+120', l: 'Écoles accompagnées' },
-                { v: '50 000+', l: 'Élèves suivis' },
-                { v: '2 Mds', l: 'FCFA encaissés' },
-                { v: '99,9%', l: 'Disponibilité' },
+                  { v: '1 clic', l: 'pour enregistrer un règlement' },
+                  { v: '0 calcul', l: 'de solde à faire à la main' },
+                  { v: '1 fiche', l: 'complète par élève' },
+                  { v: 'Mobile', l: 'adapté au terrain' },
               ].map((s) => (
                 <div key={s.l}>
                   <div className="text-3xl sm:text-4xl font-black text-white">{s.v}</div>
@@ -354,7 +354,7 @@ export const Landing: React.FC<LandingProps> = ({ onLogin, onRegister }) => {
             <h2 className="mt-3 text-3xl sm:text-4xl font-black tracking-tight">Moins d'administratif, plus de recouvrement</h2>
             <div className="mt-8 space-y-5">
               {[
-                { icon: Clock, t: 'Gagnez des heures chaque semaine', d: 'Fini les cahiers et tableurs. Chaque encaissement met à jour le solde de l\u2019élève instantanément.' },
+                  { icon: Clock, t: 'Gagnez des heures chaque semaine', d: 'Fini les cahiers et tableurs. Chaque règlement reçu met à jour le solde de l’élève instantanément.' },
                 { icon: BellRing, t: 'Relancez sans effort', d: 'Identifiez les impayés en un coup d\u2019œil et envoyez des rappels WhatsApp personnalisés.' },
                 { icon: ShieldCheck, t: 'Transparence totale', d: 'Chaque reçu est numéroté et daté, avec l\u2019agent caissier. Une traçabilité irréprochable.' },
               ].map((b) => (
@@ -379,7 +379,7 @@ export const Landing: React.FC<LandingProps> = ({ onLogin, onRegister }) => {
               {[...Array(5)].map((_, i) => <Star key={i} className="w-5 h-5 fill-amber-400 text-amber-400" />)}
             </div>
             <blockquote className="text-xl sm:text-2xl font-bold leading-snug">
-              « Depuis EcolePay CI, notre secrétariat encaisse plus vite, les parents reçoivent leurs reçus immédiatement et nos impayés ont fondu. C'est devenu indispensable. »
+              « EcolePay CI nous permet de savoir immédiatement qui a payé, ce qu’il reste à recouvrer et quels parents relancer. »
             </blockquote>
             <div className="mt-7 flex items-center justify-center gap-3">
               <img src={DIRECTOR_IMG} alt="Directeur" loading="lazy" className="h-12 w-12 rounded-full object-cover border-2 border-emerald-500/30" />
