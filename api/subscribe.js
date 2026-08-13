@@ -16,24 +16,46 @@ function readBuyerIp(req) {
   return undefined;
 }
 
+function getRequestData(req) {
+  if (typeof req.body === 'string') return Object.fromEntries(new URLSearchParams(req.body));
+  return req.body || {};
+}
+
+function expectsHtml(req) {
+  const accept = String(req.headers.accept || '');
+  const contentType = String(req.headers['content-type'] || '');
+  return accept.includes('text/html') || contentType.includes('application/x-www-form-urlencoded');
+}
+
+function redirectToProblem(req, res, message, status = 303) {
+  const destination = `${getOrigin(req)}/abonnement/annule?reason=${encodeURIComponent(message)}`;
+  res.setHeader('Cache-Control', 'no-store');
+  return res.redirect(status, destination);
+}
+
+function sendProblem(req, res, status, message) {
+  if (expectsHtml(req)) return redirectToProblem(req, res, message);
+  return res.status(status).json({ error: message });
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
-    return res.status(405).json({ error: 'Méthode non autorisée.' });
+    return sendProblem(req, res, 405, 'Méthode non autorisée.');
   }
 
-  const { plan, email, firstName, lastName, phone, schoolId } = req.body || {};
+  const { plan, email, firstName, lastName, phone, schoolId } = getRequestData(req);
   const planConfig = PLANS[plan];
   const apiKey = process.env.CHARIOW_API_KEY;
   const productId = planConfig && (process.env[planConfig.env] || process.env.CHARIOW_PRODUCT_ID);
 
   if (!apiKey || !productId) {
-    return res.status(503).json({ error: "Le paiement n'est pas encore configuré. Contactez l'administration EcolePay." });
+    return sendProblem(req, res, 503, "Le paiement n'est pas encore configuré. Contactez l'administration EcolePay.");
   }
 
   const cleanedPhone = String(phone || '').replace(/\D/g, '');
   if (!planConfig || !/^\S+@\S+\.\S+$/.test(String(email || '')) || !firstName?.trim() || !lastName?.trim() || cleanedPhone.length < 8) {
-    return res.status(422).json({ error: 'Veuillez renseigner un prénom, un nom, un email et un téléphone valides.' });
+    return sendProblem(req, res, 422, 'Veuillez renseigner un prénom, un nom, un email et un téléphone valides.');
   }
 
   try {
@@ -61,30 +83,27 @@ export default async function handler(req, res) {
 
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
-      return res.status(response.status >= 400 && response.status < 500 ? 400 : 502).json({
-        error: payload?.message || 'Impossible de créer le paiement. Réessayez plus tard.',
-      });
+      return sendProblem(req, res, response.status >= 400 && response.status < 500 ? 400 : 502, payload?.message || 'Impossible de créer le paiement. Réessayez plus tard.');
     }
 
     const result = payload?.data;
     if (result?.step === 'payment' && result?.payment?.checkout_url) {
-      return res.status(200).json({
-        checkoutUrl: result.payment.checkout_url,
-        saleId: result.purchase?.id || null,
-      });
+      res.setHeader('Cache-Control', 'no-store');
+      return res.redirect(303, result.payment.checkout_url);
     }
 
     if (result?.step === 'completed') {
-      return res.status(200).json({ completed: true, saleId: result.purchase?.id || null });
+      res.setHeader('Cache-Control', 'no-store');
+      return res.redirect(303, `${getOrigin(req)}/abonnement/succes`);
     }
 
     if (result?.step === 'already_purchased') {
-      return res.status(409).json({ error: 'Vous disposez déjà d’un abonnement actif pour ce produit.' });
+      return sendProblem(req, res, 409, 'Vous disposez déjà d’un abonnement actif pour ce produit.');
     }
 
-    return res.status(502).json({ error: 'Réponse de paiement inattendue. Réessayez plus tard.' });
+    return sendProblem(req, res, 502, 'Réponse de paiement inattendue. Réessayez plus tard.');
   } catch (error) {
     console.error('Création du checkout Chariow impossible.', error);
-    return res.status(502).json({ error: 'Erreur de connexion au service de paiement. Réessayez plus tard.' });
+    return sendProblem(req, res, 502, 'Erreur de connexion au service de paiement. Réessayez plus tard.');
   }
 }
