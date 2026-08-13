@@ -49,10 +49,10 @@ function MainContent() {
 
   if (loading) return <LoadingScreen />;
 
-  const returnToDashboard = () => navigate(currentUser ? 'landing' : 'landing', '/');
+  const returnToDashboard = () => window.location.assign('/');
 
   if (view === 'subscription-success') return <AbonnementSucces onBack={returnToDashboard} />;
-  if (view === 'subscription-cancel') return <AbonnementAnnule onRetry={() => navigate('subscription', '/abonnement')} onBack={returnToDashboard} />;
+  if (view === 'subscription-cancel') return <AbonnementAnnule onRetry={() => window.location.assign('/abonnement')} onBack={returnToDashboard} />;
 
   if (currentUser && view === 'subscription') {
     return (
@@ -67,7 +67,7 @@ function MainContent() {
     if (!userProfile && !loading) {
       return <Register onSwitchToLogin={() => navigate('login')} onBack={() => navigate('landing')} />;
     }
-    return <Dashboard onOpenSubscription={() => navigate('subscription', '/abonnement')} />;
+    return <Dashboard onOpenSubscription={() => window.location.assign('/abonnement')} />;
   }
 
   if (view === 'login') return <Login onSwitchToRegister={() => navigate('register')} onBack={() => navigate('landing')} />;
