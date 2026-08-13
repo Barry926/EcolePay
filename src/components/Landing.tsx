@@ -48,7 +48,7 @@ const FEATURES = [
 
 const STEPS = [
   { n: '01', title: 'Créez votre école', desc: "Inscrivez votre établissement, configurez vos classes et vos tranches de scolarité en quelques minutes." },
-  { n: '02', title: 'Enregistrez les paiements', desc: 'Encaissez les frais via Mobile Money ou espèces. Le solde de chaque élève se met à jour automatiquement.' },
+  { n: '02', title: 'Enregistrez les règlements', desc: 'Saisissez les montants réellement reçus, quel que soit le moyen utilisé. Le solde de chaque élève se met à jour automatiquement.' },
   { n: '03', title: 'Éditez reçus & relances', desc: 'Téléchargez les reçus PDF et relancez les impayés par WhatsApp. Tout est centralisé et traçable.' },
 ];
 
@@ -74,7 +74,7 @@ const PLANS = [
 ];
 
 const FAQS = [
-  { q: 'EcolePay CI fonctionne-t-il avec Wave et Orange Money ?', a: 'Oui. Vous enregistrez les paiements reçus via Wave, Orange Money, MTN MoMo, Moov Money ou en espèces, avec la référence de transaction de l\u2019opérateur pour une traçabilité totale.' },
+  { q: 'EcolePay CI fonctionne-t-il avec Wave et Orange Money ?', a: 'Oui. Vous enregistrez les règlements réellement reçus via Wave, Orange Money, MTN MoMo, Moov Money, virement, espèces ou autre moyen. EcolePay ne lance pas le paiement des frais scolaires des parents.' },
   { q: 'Les reçus sont-ils officiels ?', a: 'Chaque paiement génère un reçu PDF professionnel reprenant les informations de votre établissement (nom, code MENA, adresse), l\u2019élève, la tranche et le mode de règlement.' },
   { q: 'Puis-je gérer plusieurs secrétaires ?', a: 'Oui. Depuis les paramètres, vous ajoutez des comptes secrétariat / caisse et gérez leurs accès. Chaque encaissement indique l\u2019agent responsable.' },
   { q: 'Mes données sont-elles en sécurité ?', a: 'Vos données sont synchronisées et sauvegardées en continu. Vous restez propriétaire de l\u2019ensemble des informations de votre école.' },
