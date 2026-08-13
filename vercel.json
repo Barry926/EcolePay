@@ -1,7 +1,5 @@
 {
   "rewrites": [
-    { "source": "/abonnement", "destination": "/index.html" },
-    { "source": "/abonnement/succes", "destination": "/index.html" },
-    { "source": "/abonnement/annule", "destination": "/index.html" }
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
