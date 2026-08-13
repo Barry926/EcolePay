@@ -72,6 +72,43 @@ function MainContent() {
   return <Landing onLogin={() => navigate('login')} onRegister={() => navigate('register')} />;
 }
 
+function DebugConsole() {
+  const [show, setShow] = React.useState(false);
+  const [logs, setLogs] = React.useState<any[]>([]);
+  
+  React.useEffect(() => {
+    const handleTripleClick = (e: MouseEvent) => {
+      if (e.detail === 3) setShow(s => !s);
+    };
+    window.addEventListener('click', handleTripleClick);
+    const interval = setInterval(() => setLogs([...((window as any)._appLog || [])]), 1000);
+    return () => {
+      window.removeEventListener('click', handleTripleClick);
+      clearInterval(interval);
+    };
+  }, []);
+
+  if (!show) return null;
+  return (
+    <div className="fixed inset-0 z-[9999] bg-black/90 text-emerald-400 p-4 font-mono text-[10px] overflow-auto select-text">
+      <div className="flex justify-between border-b border-emerald-900 pb-2 mb-2">
+        <span className="font-bold">DEBUG CONSOLE (Triple-click to close)</span>
+        <button onClick={() => setShow(false)}>CLOSE</button>
+      </div>
+      {logs.length === 0 ? "No logs yet..." : logs.map((l, i) => (
+        <div key={i} className="mb-2 border-b border-emerald-900/30 pb-1">
+          <span className="opacity-50">[{l.time.split('T')[1].split('.')[0]}]</span> {l.msg}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function App() {
-  return <AuthProvider><MainContent /></AuthProvider>;
+  return (
+    <AuthProvider>
+      <MainContent />
+      <DebugConsole />
+    </AuthProvider>
+  );
 }
