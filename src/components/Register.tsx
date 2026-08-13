@@ -9,10 +9,10 @@ interface RegisterProps {
 }
 
 export const Register: React.FC<RegisterProps> = ({ onSwitchToLogin, onBack }) => {
-  const { registerWithEmail } = useAuth();
+  const { registerWithEmail, currentUser } = useAuth();
 
   const [nomEcole, setNomEcole] = useState('');
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(currentUser?.email || '');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);

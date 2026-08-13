@@ -32,7 +32,7 @@ function getViewFromPath(): View | null {
 }
 
 function MainContent() {
-  const { currentUser, loading, schoolProfile } = useAuth();
+  const { currentUser, userProfile, loading, schoolProfile } = useAuth();
   const [view, setView] = useState<View>(() => getViewFromPath() || 'landing');
 
   useEffect(() => {
@@ -58,6 +58,10 @@ function MainContent() {
   }
 
   if (currentUser) {
+    // Si l'utilisateur est connecté mais n'a pas de profil Firestore, on le force à s'enregistrer
+    if (!userProfile && !loading) {
+      return <Register onSwitchToLogin={() => navigate('login')} onBack={() => navigate('landing')} />;
+    }
     return <Dashboard onOpenSubscription={() => navigate('subscription', '/abonnement')} />;
   }
 

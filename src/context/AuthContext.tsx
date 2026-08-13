@@ -72,11 +72,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const userDocSnap = await getDoc(doc(db, 'utilisateurs', user.uid));
 
         if (!userDocSnap.exists()) {
-          // IMPORTANT: Si le profil n'existe pas, on déconnecte pour éviter d'être bloqué
-          // dans un état "connecté sans données".
+          // Si le profil n'existe pas, on reste connecté mais on laisse les profils à null
+          // pour que l'interface puisse proposer de finaliser l'inscription.
           console.warn("Profil Firestore manquant pour l'UID:", user.uid);
-          await signOut(auth);
-          setCurrentUser(null);
+          setCurrentUser(user);
           setUserProfile(null);
           setSchoolProfile(null);
           setLoading(false);
@@ -142,8 +141,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const registerWithEmail = async (email: string, pass: string, nomEcole: string) => {
     setLoading(true);
     try {
-      const result = await withTimeout(createUserWithEmailAndPassword(auth, email.trim(), pass));
-      const user = result.user;
+      let user;
+      try {
+        const result = await withTimeout(createUserWithEmailAndPassword(auth, email.trim(), pass));
+        user = result.user;
+      } catch (authError: any) {
+        // Si l'utilisateur existe déjà, on essaie de se connecter pour créer le profil manquant
+        if (authError.code === 'auth/email-already-in-use') {
+          const loginResult = await withTimeout(signInWithEmailAndPassword(auth, email.trim(), pass));
+          user = loginResult.user;
+          
+          // Vérifier si le profil existe déjà vraiment
+          const existingDoc = await getDoc(doc(db, 'utilisateurs', user.uid));
+          if (existingDoc.exists()) {
+            throw new Error("Ce compte est déjà actif. Veuillez vous connecter normalement.");
+          }
+        } else {
+          throw authError;
+        }
+      }
+      
+      if (!user) throw new Error("Impossible de récupérer l'utilisateur.");
       const ecoleId = `EP-${crypto.randomUUID()}`;
 
       const newSchool: Etablissement = {
