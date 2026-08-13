@@ -68,19 +68,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return;
       }
 
-      setCurrentUser(user);
-
       try {
         const userDocSnap = await getDoc(doc(db, 'utilisateurs', user.uid));
 
         if (!userDocSnap.exists()) {
-          // Le compte Firebase existe mais son profil métier n'est pas encore configuré.
-          // Aucun établissement ni profil fictif n'est créé automatiquement.
+          // IMPORTANT: Si le profil n'existe pas, on déconnecte pour éviter d'être bloqué
+          // dans un état "connecté sans données".
+          console.warn("Profil Firestore manquant pour l'UID:", user.uid);
+          await signOut(auth);
+          setCurrentUser(null);
           setUserProfile(null);
           setSchoolProfile(null);
           setLoading(false);
           return;
         }
+
+        setCurrentUser(user);
 
         const profile = userDocSnap.data() as Utilisateur;
         setUserProfile(profile);

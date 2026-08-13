@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { auth } from '../firebase';
 import { ThemeToggle } from './ThemeToggle';
 import { Mail, Lock, ShieldCheck, ArrowRight, AlertCircle } from 'lucide-react';
 
@@ -28,6 +29,17 @@ export const Login: React.FC<LoginProps> = ({ onSwitchToRegister, onBack }) => {
     try {
       setLoading(true);
       await loginWithEmail(email, password);
+      
+      // Petit délai pour laisser le temps au profil de se charger
+      setTimeout(() => {
+        if (loading) return; // Toujours en chargement
+        // Si on est toujours sur la page de login après un succès technique, 
+        // c'est que le profil Firestore est manquant.
+        const checkUser = auth.currentUser;
+        if (!checkUser) {
+          setError("Votre compte existe mais aucun profil école n'y est associé. Veuillez utiliser 'Créer un compte'.");
+        }
+      }, 2000);
     } catch (err: any) {
       console.error('Login error:', err);
       let errorMsg = 'Identifiants incorrects ou problème de connexion.';
