@@ -76,7 +76,7 @@ export const Abonnement: React.FC<AbonnementProps> = ({ schoolId, initialEmail =
           <div className="flex items-center gap-3">
             <span className="h-9 w-9 rounded-xl bg-[#16A34A] text-white font-black flex items-center justify-center">EP</span>
             <span className="font-black tracking-tight">EcolePay <span className="text-[#16A34A]">CI</span></span>
-            <ThemeToggle variant="inline" />
+            <ThemeToggle variant="header" />
           </div>
         </div>
       </header>

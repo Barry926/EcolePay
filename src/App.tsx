@@ -7,6 +7,7 @@ import { Dashboard } from './components/Dashboard';
 import { Landing } from './components/Landing';
 import { Login } from './components/Login';
 import { Register } from './components/Register';
+import { PageErrorBoundary } from './components/PageErrorBoundary';
 
 function LoadingScreen() {
   return (
@@ -54,7 +55,11 @@ function MainContent() {
   if (view === 'subscription-cancel') return <AbonnementAnnule onRetry={() => navigate('subscription', '/abonnement')} onBack={returnToDashboard} />;
 
   if (currentUser && view === 'subscription') {
-    return <Abonnement schoolId={schoolProfile?.id} initialEmail={currentUser.email || ''} onBack={returnToDashboard} />;
+    return (
+      <PageErrorBoundary pageName="la page d’abonnement" onBack={returnToDashboard}>
+        <Abonnement schoolId={schoolProfile?.id} initialEmail={currentUser.email || ''} onBack={returnToDashboard} />
+      </PageErrorBoundary>
+    );
   }
 
   if (currentUser) {
