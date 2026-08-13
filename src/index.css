@@ -1,135 +1,144 @@
-/** STYLE SCOLÉA — Système global « Cahier de direction contemporain » : papier ivoire, encre, forêt, safran, typographies éditoriales et interactions courtes. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
-@custom-variant dark (&:is(.dark *));
+/* Dark mode piloté par la classe .dark sur <html> */
+@custom-variant dark (&:where(.dark, .dark *));
 
-@theme inline {
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  /* Palette EcolePay CI */
+  --color-brand: #16A34A;
+  --color-brand-dark: #15803D;
+  --color-brand-soft: #DCFCE7;
 }
-
-:root { --radius: 0.9rem; --background: oklch(0.97 0.012 92); --foreground: oklch(0.19 0.025 155); --card: oklch(1 0 0); --card-foreground: oklch(0.19 0.025 155); --popover: oklch(1 0 0); --popover-foreground: oklch(0.19 0.025 155); --primary: oklch(0.38 0.1 164); --primary-foreground: oklch(0.98 0.012 92); --secondary: oklch(0.94 0.025 92); --secondary-foreground: oklch(0.26 0.04 155); --muted: oklch(0.94 0.02 92); --muted-foreground: oklch(0.5 0.03 155); --accent: oklch(0.65 0.16 64); --accent-foreground: oklch(0.2 0.03 155); --destructive: oklch(0.62 0.19 28); --destructive-foreground: oklch(0.99 0 0); --border: oklch(0.86 0.025 92); --input: oklch(0.86 0.025 92); --ring: oklch(0.65 0.16 64); }
 
 @layer base {
+  :root {
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+
   * {
-    @apply border-border outline-ring/50;
+    /* Transition douce entre light et dark (300ms) */
+    transition-property: background-color, border-color, color, fill, stroke, box-shadow;
+    transition-duration: 300ms;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   }
+
   body {
-    @apply bg-background text-foreground;
-    font-family: 'Manrope', sans-serif;
-    background-image: linear-gradient(rgba(23,35,31,.025) 1px, transparent 1px);
-    background-size: 100% 32px;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: #F9FAFB;
   }
-  ::selection { background: #E38B35; color: #17231F; }
-  button, a, input, select, textarea { transition: border-color 180ms cubic-bezier(.23,1,.32,1), color 180ms cubic-bezier(.23,1,.32,1), background-color 180ms cubic-bezier(.23,1,.32,1), transform 180ms cubic-bezier(.23,1,.32,1), box-shadow 180ms cubic-bezier(.23,1,.32,1); }
-  button:active { transform: scale(.98); }
-  h1, h2, h3, h4, .font-display { font-family: 'DM Serif Display', serif; font-weight: 400; }
-  input:focus, select:focus, textarea:focus { outline: 2px solid rgba(227,139,53,.45); outline-offset: 2px; }
-  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
+  html.dark body {
+    background-color: #0F172A;
+  }
+
+  ::selection {
+    background-color: rgba(22, 163, 74, 0.25);
+    color: inherit;
+  }
 }
 
-@layer utilities {
-  .bg-ivory { background-color: #F7F4EE; }
-  .bg-ink { background-color: #17231F; }
-  .bg-forest { background-color: #155B4A; }
-  .bg-saffron { background-color: #E38B35; }
-  .text-ink { color: #17231F; }
-  .text-forest { color: #155B4A; }
-  .text-saffron { color: #E38B35; }
-  .text-coral { color: #C35D52; }
-  .bg-coral { background-color: #C35D52; }
-  .border-ink { border-color: #17231F; }
-  .eyebrow { display: flex; align-items: center; gap: .7rem; color: rgba(23,35,31,.48); font-size: 10px; font-weight: 800; letter-spacing: .18em; line-height: 1; text-transform: uppercase; }
-  .eyebrow::before { content: ''; display: block; height: 1px; width: 20px; background: #E38B35; }
-  .field-label { display: block; margin-bottom: .55rem; color: rgba(23,35,31,.55); font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
-  .field { width: 100%; border-radius: .8rem; border: 1px solid rgba(23,35,31,.14); background: rgba(255,255,255,.8); padding: .8rem .95rem; color: #17231F; font-size: .875rem; font-weight: 600; }
-  .field::placeholder { color: rgba(23,35,31,.32); }
-  .field-suffix { position: absolute; right: .9rem; top: 50%; transform: translateY(-50%); color: rgba(23,35,31,.42); font-size: .7rem; font-weight: 800; }
-  .metric-label { color: rgba(23,35,31,.45); font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
-  .ledger-grid { background-image: linear-gradient(rgba(23,35,31,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(23,35,31,.025) 1px, transparent 1px); background-size: 100% 32px, 32px 100%; }
-  .folio-tag { display: inline-flex; align-items: center; gap: .5rem; color: rgba(23,35,31,.42); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
-  .folio-tag::before { content: '—'; color: #E38B35; }
-  #fonctionnalites { background-image: linear-gradient(rgba(23,35,31,.035) 1px, transparent 1px); background-size: 100% 32px; }
-  #tarifs .mt-14.grid.gap-4 { gap: 0; border-top: 1px solid rgba(255,255,255,.16); border-bottom: 1px solid rgba(255,255,255,.16); }
-  #tarifs .rounded-\[22px\] { border-radius: 0; border-width: 0; }
-  #tarifs .rounded-\[22px\] + .rounded-\[22px\] { border-left: 1px solid rgba(255,255,255,.16); }
-  #faq .mt-12.border-t { background-image: linear-gradient(rgba(23,35,31,.035) 1px, transparent 1px); background-size: 100% 32px; }
-  section.bg-saffron::before { content: ''; position: absolute; right: 2rem; top: 2rem; width: 44px; height: 44px; background: url('/manus-storage/scolea-mark_192105b7.png') center/contain no-repeat; opacity: .72; }
+/* ================= Animations ================= */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes overlayIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(120%); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes shimmer {
+  0% { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
+}
+@keyframes riseIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-@layer components {
-  /**
-   * Custom container utility that centers content and adds responsive padding.
-   *
-   * This overrides Tailwind's default container behavior to:
-   * - Auto-center content (mx-auto)
-   * - Add responsive horizontal padding
-   * - Set max-width for large screens
-   *
-   * Usage: <div className="container">...</div>
-   *
-   * For custom widths, use max-w-* utilities directly:
-   * <div className="max-w-6xl mx-auto px-4">...</div>
-   */
-  .container {
-    width: 100%;
-    margin-left: auto;
-    margin-right: auto;
-    padding-left: 1rem; /* 16px - mobile padding */
-    padding-right: 1rem;
-  }
+.animate-fadeIn { animation: fadeIn 0.25s ease-out both; }
+.animate-modalIn { animation: modalIn 0.32s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-overlayIn { animation: overlayIn 0.25s ease-out both; }
+.animate-toastIn { animation: toastIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-riseIn { animation: riseIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
 
-  .flex {
-    min-height: 0;
-    min-width: 0;
-  }
+/* Reveal en cascade pour les cartes du dashboard */
+.stagger > * { animation: riseIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.stagger > *:nth-child(1) { animation-delay: 0.04s; }
+.stagger > *:nth-child(2) { animation-delay: 0.10s; }
+.stagger > *:nth-child(3) { animation-delay: 0.16s; }
+.stagger > *:nth-child(4) { animation-delay: 0.22s; }
+.stagger > *:nth-child(5) { animation-delay: 0.28s; }
+.stagger > *:nth-child(6) { animation-delay: 0.34s; }
 
-  @media (min-width: 640px) {
-    .container {
-      padding-left: 1.5rem; /* 24px - tablet padding */
-      padding-right: 1.5rem;
-    }
-  }
+/* ================= Skeleton loaders ================= */
+.skeleton {
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 1000px 100%;
+  animation: shimmer 1.6s linear infinite;
+  border-radius: 10px;
+}
+html.dark .skeleton {
+  background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+  background-size: 1000px 100%;
+}
 
-  @media (min-width: 1024px) {
-    .container {
-      padding-left: 2rem; /* 32px - desktop padding */
-      padding-right: 2rem;
-      max-width: 1280px; /* Standard content width */
-    }
-  }
+/* Effet de survol premium sur les cartes */
+.card-hover {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+}
+
+/* Reveal au scroll (landing) */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+.reveal.in-view { opacity: 1; transform: none; }
+
+@keyframes floaty {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+.animate-floaty { animation: floaty 5s ease-in-out infinite; }
+
+@keyframes gridpan {
+  from { background-position: 0 0; }
+  to { background-position: 44px 44px; }
+}
+
+/* ================= Scrollbars ================= */
+.scrollbar-none { scrollbar-width: none; }
+.scrollbar-none::-webkit-scrollbar { display: none; }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; background-clip: content-box; }
+html.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+  background-clip: content-box;
 }
